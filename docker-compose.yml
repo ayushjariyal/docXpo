@@ -1,0 +1,139 @@
+services:
+  postgres:
+    # pgvector/pgvector ships the vector extension pre-compiled. Using plain
+    # postgres:16 would mean building the extension from source in a custom
+    # Dockerfile for no benefit.
+    image: pgvector/pgvector:pg16
+    container_name: docxpo-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-docxpo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-docxpo}
+      POSTGRES_DB: ${POSTGRES_DB:-docxpo}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      # pg_isready, not a TCP port check: Postgres binds its port several
+      # seconds before it will actually accept queries, so a port check lets
+      # the app start too early and crash on first connect.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-docxpo} -d ${POSTGRES_DB:-docxpo}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: docxpo-redis
+    ports:
+      - "6379:6379"
+    # appendonly keeps the semantic cache (Phase 4) and rate-limit buckets
+    # across restarts. Not strictly required -- both are rebuildable -- but it
+    # makes local development less surprising.
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Optional: a local LLM so the whole stack runs with no API keys and no spend.
+  # Behind a profile because the image is ~1GB and the models are larger again,
+  # so `docker compose up` stays fast for people using a hosted provider or an
+  # Ollama already installed on the host.
+  #   docker compose --profile llm up -d
+  #   docker compose exec ollama ollama pull qwen2.5:0.5b
+  ollama:
+    image: ollama/ollama:latest
+    container_name: docxpo-ollama
+    profiles: ["llm"]
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    healthcheck:
+      # The image has no curl; `ollama list` exercises the same API the app uses.
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: docxpo-app
+    depends_on:
+      # service_healthy (not just service_started) means compose waits for the
+      # healthchecks above to pass before starting the app.
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # Inside the compose network, services resolve each other by name.
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: ${POSTGRES_USER:-docxpo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-docxpo}
+      POSTGRES_DB: ${POSTGRES_DB:-docxpo}
+      REDIS_HOST: redis
+      ENVIRONMENT: ${ENVIRONMENT:-local}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LOG_JSON: ${LOG_JSON:-false}
+      DEFAULT_PROVIDER: ${DEFAULT_PROVIDER:-gemini}
+      # Passed through from your .env. Deliberately NOT `${VAR:?error}`: that
+      # form aborts *every* compose command, so you could not even run
+      # `docker compose down` or `logs` without a key set. Enforcement lives in
+      # the app's startup check instead -- one place, and a clearer message.
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-flash-latest}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-4-6}
+      VALIDATE_PROVIDER_ON_STARTUP: ${VALIDATE_PROVIDER_ON_STARTUP:-true}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      # host.docker.internal reaches an Ollama running on the host; override to
+      # http://ollama:11434 when using the `llm` profile above.
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2}
+    extra_hosts:
+      # Makes host.docker.internal resolve on Linux too (it is built in on
+      # Docker Desktop for Mac/Windows but not on plain Linux daemons).
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8000:8000"
+    healthcheck:
+      # Uses python rather than curl: the slim runtime image has no curl, and
+      # installing one just for a healthcheck adds surface area for nothing.
+      # Hits liveness, not readiness -- a container whose database is down is
+      # still a healthy container.
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8000/health').read()"
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      # Don't count failures during boot (migrations + uvicorn start) as
+      # unhealthy; the clock only starts after this window.
+      start_period: 20s
+    volumes:
+      # Bind-mount source for live reload during development. Remove this (and
+      # --reload below) for anything resembling production.
+      - ./app:/app/app
+      - ./alembic:/app/alembic
+    command:
+      - sh
+      - -c
+      # Migrations run here, before the server starts, rather than in the app's
+      # lifespan hook -- see app/main.py for why. In a real deployment this
+      # would be a separate job/init-container, not part of the app command.
+      - "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --no-access-log"
+
+volumes:
+  postgres_data:
+  redis_data:
+  ollama_models:

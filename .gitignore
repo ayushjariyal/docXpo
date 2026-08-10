@@ -1,0 +1,26 @@
+.env
+*.env
+!.env.example
+
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Local model / upload scratch space
+uploads/
+body.json

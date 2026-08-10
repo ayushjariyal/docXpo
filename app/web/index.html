@@ -1,0 +1,799 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>docXpo</title>
+<style>
+  :root {
+    --bg:#0f1115; --panel:#171a21; --panel-2:#1e222b; --line:#2a2f3a;
+    --fg:#e6e9ef; --muted:#8b93a7; --accent:#6ea8fe; --user:#243044;
+    --err:#ff6b6b; --ok:#4ade80; --warn:#fbbf24; --accent-track:#25344d;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg:#f6f7f9; --panel:#fff; --panel-2:#f0f2f5; --line:#dfe3ea;
+      --fg:#12151b; --muted:#5c6478; --accent:#2563eb; --user:#e6edfb;
+      --err:#c92a2a; --ok:#137a3b; --warn:#a16207; --accent-track:#cfe0fb;
+    }
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; height:100vh; display:flex; flex-direction:column;
+    background:var(--bg); color:var(--fg);
+    font:14px/1.55 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  }
+  header {
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    padding:10px 16px; border-bottom:1px solid var(--line); background:var(--panel);
+  }
+  header h1 { font-size:15px; margin:0; font-weight:650; letter-spacing:.2px; }
+  header .sp { flex:1; }
+  label { color:var(--muted); font-size:12px; }
+  select, textarea, input, button {
+    font:inherit; color:var(--fg); background:var(--panel-2);
+    border:1px solid var(--line); border-radius:8px; padding:6px 9px;
+  }
+  input[type=number] { width:64px; }
+  button { cursor:pointer; }
+  button:hover:not(:disabled) { border-color:var(--accent); }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
+  /* Segmented mode switch */
+  .seg { display:flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  .seg button { border:0; border-radius:0; background:var(--panel-2); padding:6px 12px; }
+  .seg button.on { background:var(--accent); color:#fff; font-weight:600; }
+
+  #docs { display:none; border-bottom:1px solid var(--line); background:var(--panel-2); padding:12px 16px; }
+  #docs.open { display:block; }
+  .docs-inner { max-width:860px; margin:0 auto; display:grid; gap:10px; }
+  .docs-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .doclist { display:grid; gap:6px; max-height:190px; overflow-y:auto; }
+  .doc {
+    display:flex; align-items:center; gap:10px; padding:7px 10px;
+    background:var(--panel); border:1px solid var(--line); border-radius:8px; font-size:13px;
+  }
+  .doc .nm { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .doc .meta { color:var(--muted); font-size:11.5px; font-variant-numeric:tabular-nums; }
+  .doc button { padding:2px 8px; font-size:12px; }
+
+  #log { flex:1; overflow-y:auto; padding:18px 16px; }
+  .wrap { max-width:860px; margin:0 auto; }
+  .msg { margin-bottom:16px; }
+  .who { font-size:11px; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); margin-bottom:5px; }
+  .bubble {
+    background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding:11px 13px; white-space:pre-wrap; word-wrap:break-word;
+  }
+  .msg.user .bubble { background:var(--user); }
+  .msg.error .bubble { border-color:var(--err); color:var(--err); }
+  .stats { margin-top:6px; font-size:11.5px; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .stats b { color:var(--fg); font-weight:600; }
+
+  /* Citation marker rendered inside the answer text. */
+  .cite {
+    display:inline-block; background:var(--accent); color:#fff; border-radius:4px;
+    padding:0 5px; font-size:11px; font-weight:700; cursor:pointer; vertical-align:1px;
+  }
+  details.src { margin-top:8px; }
+  details.src > summary { cursor:pointer; color:var(--muted); font-size:12px; }
+  .srcitem {
+    margin-top:6px; padding:8px 10px; background:var(--panel-2);
+    border:1px solid var(--line); border-left:3px solid var(--accent); border-radius:6px;
+    font-size:12.5px; white-space:pre-wrap;
+  }
+  .srcitem.hi { border-color:var(--warn); border-left-color:var(--warn); }
+  .srchead { color:var(--muted); font-size:11.5px; margin-bottom:4px; font-variant-numeric:tabular-nums; }
+  .hit {
+    background:var(--ok); color:#04170c; border-radius:4px;
+    padding:1px 6px; font-size:10.5px; font-weight:800; letter-spacing:.4px;
+  }
+  .cursor::after {
+    content:'▌'; margin-left:1px; color:var(--accent); animation:blink 1s steps(2) infinite;
+  }
+  @keyframes blink { 50% { opacity:0; } }
+  footer { border-top:1px solid var(--line); background:var(--panel); padding:12px 16px; }
+  .row { display:flex; gap:8px; align-items:flex-end; max-width:860px; margin:0 auto; }
+  textarea#input { flex:1; resize:none; min-height:44px; max-height:180px; }
+  .hint { max-width:860px; margin:6px auto 0; font-size:11px; color:var(--muted); }
+  #sys { display:none; max-width:860px; margin:0 auto 8px; width:100%; }
+  #ragctl { display:none; max-width:860px; margin:0 auto 8px; gap:10px; align-items:center; flex-wrap:wrap; }
+  #ragctl.on { display:flex; }
+  .empty { color:var(--muted); text-align:center; margin-top:14vh; }
+  /* ---- metrics panel ---- */
+  #metrics { display:none; flex:1; overflow-y:auto; padding:18px 16px; }
+  #metrics.on { display:block; }
+  .mwrap { max-width:940px; margin:0 auto; display:grid; gap:16px; }
+  .mrow { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+
+  /* Hero figure: exactly one per view, >=48px, same sans as everything else.
+     Proportional figures (NOT tabular-nums) -- at display sizes tabular digits
+     give every glyph the width of a 0 and the number reads loose. */
+  .hero { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 18px; }
+  .hero .label { color:var(--muted); font-size:12px; margin-bottom:2px; }
+  .hero .value { font-size:52px; line-height:1.05; font-weight:600; letter-spacing:-1px; }
+  .hero .sub { color:var(--muted); font-size:12.5px; margin-top:4px; }
+
+  /* KPI row of stat tiles: label (sentence case, no colon) + value. */
+  .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
+  .kpi { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:11px 13px; }
+  .kpi .label { color:var(--muted); font-size:11.5px; margin-bottom:3px; }
+  .kpi .value { font-size:24px; font-weight:600; line-height:1.2; }
+  .kpi .sub { color:var(--muted); font-size:11px; margin-top:2px; }
+
+  /* Meter: a single ratio against a limit. The unfilled track is a LIGHTER STEP
+     OF THE SAME RAMP (not grey), so the state reads across the whole bar. */
+  .meter { height:8px; border-radius:999px; background:var(--accent-track); overflow:hidden; }
+  .meter > span { display:block; height:100%; background:var(--accent); border-radius:999px; }
+
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px 14px; }
+  .card h3 { margin:0 0 9px; font-size:12px; font-weight:650; color:var(--muted);
+             text-transform:uppercase; letter-spacing:.6px; }
+  table.m { width:100%; border-collapse:collapse; font-size:12.5px; }
+  table.m th { text-align:left; color:var(--muted); font-weight:600; font-size:11px;
+               text-transform:uppercase; letter-spacing:.4px; padding:4px 8px 6px; }
+  table.m td { padding:5px 8px; border-top:1px solid var(--line); }
+  /* tabular-nums belongs HERE -- columns of numbers that must align vertically. */
+  table.m td.n, table.m th.n { text-align:right; font-variant-numeric:tabular-nums; }
+  .pill { font-size:10.5px; font-weight:700; padding:1px 6px; border-radius:4px;
+          background:var(--ok); color:#04170c; }
+  .mempty { color:var(--muted); text-align:center; padding:28px 0; }
+  .toast { color:var(--muted); font-size:12px; }
+  .toast.bad { color:var(--err); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>docXpo</h1>
+  <div class="seg">
+    <button id="mChat" class="on" type="button">Chat</button>
+    <button id="mRag" type="button">Ask docs</button>
+    <button id="mMetrics" type="button">Metrics</button>
+  </div>
+  <label>provider
+    <select id="provider">
+      <option value="">default</option>
+      <option value="gemini">gemini</option>
+      <option value="anthropic">anthropic</option>
+      <option value="openai">openai</option>
+      <option value="ollama">ollama</option>
+    </select>
+  </label>
+  <label>model <input id="model" placeholder="(default)" size="14"></label>
+  <span class="sp"></span>
+  <label>api key <input id="apikey" type="password" placeholder="(none)" size="12"></label>
+  <button id="toggleDocs" type="button">Documents</button>
+  <button id="toggleSys" type="button">system prompt</button>
+  <button id="reset" type="button">new chat</button>
+</header>
+
+<section id="docs">
+  <div class="docs-inner">
+    <div class="docs-row">
+      <input type="file" id="file" accept=".pdf,.txt,.md,.json,.csv,.log,.py,.js,.html,application/pdf,text/*">
+      <button id="upload" type="button">Upload file</button>
+      <span class="sp"></span>
+      <button id="refresh" type="button">Refresh</button>
+      <span id="docmsg" class="toast"></span>
+    </div>
+    <div class="docs-row">
+      <textarea id="paste" rows="2" style="flex:1" placeholder="…or paste text to index"></textarea>
+      <button id="pasteBtn" type="button">Index text</button>
+    </div>
+    <div class="doclist" id="doclist"></div>
+  </div>
+</section>
+
+<div id="log"><div class="wrap"><div class="empty">Send a message to start.</div></div></div>
+
+<section id="metrics">
+  <div class="mwrap">
+    <div class="mrow">
+      <label>window
+        <select id="mwindow">
+          <option value="1">last hour</option>
+          <option value="24" selected>last 24h</option>
+          <option value="168">last 7 days</option>
+          <option value="0">all time</option>
+        </select>
+      </label>
+      <button id="mrefresh" type="button">Refresh</button>
+      <span id="mstatus" class="toast"></span>
+    </div>
+    <div id="mbody"></div>
+  </div>
+</section>
+
+<footer>
+  <textarea id="sys" rows="2" placeholder="Optional system prompt — chat mode only (RAG supplies its own)"></textarea>
+  <div id="ragctl">
+    <label>top_k <input id="topk" type="number" min="1" max="20" value="5"></label>
+    <label>min_sim <input id="minsim" type="number" min="0" max="1" step="0.05" value="0.5"></label>
+    <label title="Retrieve chunks without generating an answer. Costs no generation quota.">
+      <input type="checkbox" id="retrieveOnly"> retrieve only
+    </label>
+  </div>
+  <div class="row">
+    <textarea id="input" rows="1" placeholder="Ask something…  (Enter to send, Shift+Enter for newline)"></textarea>
+    <button id="send" class="primary">Send</button>
+    <button id="stop" disabled>Stop</button>
+  </div>
+  <div class="hint" id="hint">Chat mode → <code>POST /v1/chat</code>. TTFT = time to first token.</div>
+</footer>
+
+<script>
+// ---------------------------------------------------------------------------
+// Why fetch() and not EventSource:
+// EventSource is the browser's built-in SSE client, but it can only issue GET
+// requests and cannot set a body. Both of our streaming endpoints are POSTs
+// with JSON payloads, so we read the response stream and parse SSE frames
+// ourselves.
+// ---------------------------------------------------------------------------
+
+const $ = (id) => document.getElementById(id);
+const log = $('log').firstElementChild;
+
+let mode = 'chat';     // 'chat' | 'rag'
+let history = [];      // chat mode only; RAG is single-shot per question
+let controller = null;
+
+// Every call to /v1/* goes through this, so the key is attached in exactly
+// one place. Stored in localStorage: it is a dev console, and typing the key
+// on every reload would make the feature unusable. Not appropriate for a real
+// product -- localStorage is readable by any script on the origin.
+function authHeaders(base = {}) {
+  const k = $('apikey').value.trim();
+  return k ? { ...base, 'X-API-Key': k } : base;
+}
+
+/** Surface 401/429 clearly instead of as a generic failure. */
+function limitMessage(res, detail) {
+  if (res.status === 401) return 'Unauthorized — set your API key in the header field.';
+  if (res.status === 429) {
+    const retry = res.headers.get('Retry-After');
+    return `Rate limited${retry ? ` — retry in ${retry}s` : ''}. `
+         + `${res.headers.get('X-RateLimit-Limit') ?? '?'}/min allowed.`;
+  }
+  return typeof detail === 'string' ? detail : (detail?.error ?? JSON.stringify(detail));
+}
+
+const esc = (s) => s.replace(/[&<>"]/g, (c) =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+
+function setMode(next) {
+  mode = next;
+  $('mChat').classList.toggle('on', next === 'chat');
+  $('mRag').classList.toggle('on', next === 'rag');
+  $('mMetrics').classList.toggle('on', next === 'metrics');
+
+  const showingMetrics = next === 'metrics';
+  $('metrics').classList.toggle('on', showingMetrics);
+  $('log').style.display = showingMetrics ? 'none' : 'block';
+  document.querySelector('footer').style.display = showingMetrics ? 'none' : 'block';
+  if (showingMetrics) { loadMetrics(); return; }
+  $('ragctl').classList.toggle('on', next === 'rag');
+  $('sys').style.display = next === 'rag' ? 'none' : $('sys').style.display;
+  $('hint').innerHTML = next === 'rag'
+    ? 'RAG mode → <code>POST /v1/rag/query</code>. Answers use only your indexed documents.'
+    : 'Chat mode → <code>POST /v1/chat</code>. TTFT = time to first token.';
+  $('input').placeholder = next === 'rag'
+    ? 'Ask about your documents…'
+    : 'Ask something…  (Enter to send, Shift+Enter for newline)';
+  if (next === 'rag') loadDocs();
+}
+
+// ---- documents ------------------------------------------------------------
+
+function docMsg(text, bad = false) {
+  const el = $('docmsg');
+  el.textContent = text;
+  el.className = 'toast' + (bad ? ' bad' : '');
+  if (text) setTimeout(() => { if (el.textContent === text) el.textContent = ''; }, 4000);
+}
+
+async function loadDocs() {
+  try {
+    const res = await fetch('/v1/documents?limit=100', { headers: authHeaders() });
+    const data = await res.json();
+    const list = $('doclist');
+    if (!data.documents.length) {
+      list.innerHTML = '<div class="toast">No documents indexed yet.</div>';
+      return;
+    }
+    list.innerHTML = '';
+    for (const d of data.documents) {
+      const row = document.createElement('div');
+      row.className = 'doc';
+      row.innerHTML =
+        `<span class="nm"></span>` +
+        `<span class="meta">${d.chunk_count} chunk${d.chunk_count === 1 ? '' : 's'} · ${d.char_count.toLocaleString()} chars</span>` +
+        `<button type="button">delete</button>`;
+      row.querySelector('.nm').textContent = d.filename;
+      row.querySelector('button').onclick = async () => {
+        if (!confirm(`Delete "${d.filename}" and its chunks?`)) return;
+        const r = await fetch(`/v1/documents/${d.id}`, { method: 'DELETE', headers: authHeaders() });
+        docMsg(r.ok ? 'deleted' : 'delete failed', !r.ok);
+        loadDocs();
+      };
+      list.appendChild(row);
+    }
+  } catch (e) {
+    docMsg('could not load documents: ' + e.message, true);
+  }
+}
+
+async function ingest(fn) {
+  docMsg('indexing… (embedding can take a few seconds)');
+  try {
+    const res = await fn();
+    if (!res.ok) {
+      let d; try { d = (await res.json()).detail; } catch { d = await res.text(); }
+      docMsg(limitMessage(res, d), true);
+      return;
+    }
+    const doc = await res.json();
+    docMsg(`indexed "${doc.filename}" → ${doc.chunk_count} chunks`);
+    loadDocs();
+  } catch (e) {
+    docMsg(e.message, true);
+  }
+}
+
+$('upload').onclick = () => {
+  const f = $('file').files[0];
+  if (!f) return docMsg('choose a file first', true);
+  const body = new FormData();
+  body.append('file', f);
+  // No content-type header: the browser must set the multipart boundary itself.
+  ingest(() => fetch('/v1/documents', { method: 'POST', body, headers: authHeaders() }));
+};
+
+$('pasteBtn').onclick = () => {
+  const content = $('paste').value.trim();
+  if (!content) return docMsg('paste some text first', true);
+  ingest(() => fetch('/v1/documents/text', {
+    method: 'POST',
+    headers: authHeaders({ 'content-type': 'application/json' }),
+    body: JSON.stringify({ filename: 'pasted.txt', content }),
+  })).then(() => { $('paste').value = ''; });
+};
+
+$('refresh').onclick = loadDocs;
+$('toggleDocs').onclick = () => {
+  $('docs').classList.toggle('open');
+  if ($('docs').classList.contains('open')) loadDocs();
+};
+
+// ---- metrics ---------------------------------------------------------------
+
+/** Auto-compact per the stat-tile contract: 1,284 / 12.9K / 4.2M. */
+function compact(n) {
+  if (n === null || n === undefined) return '—';
+  if (n >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M';
+  if (n >= 1e4) return (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'K';
+  return n.toLocaleString();
+}
+
+/** Money: keep enough precision that a sub-cent request isn't shown as $0. */
+function money(v) {
+  const n = Number(v);
+  if (!isFinite(n)) return '$0';
+  if (n === 0) return '$0';
+  if (n < 0.01) return '$' + n.toFixed(6).replace(/0+$/, '').replace(/\.$/, '');
+  if (n < 1000) return '$' + n.toFixed(4).replace(/0+$/, '').replace(/\.$/, '');
+  return '$' + compact(n);
+}
+
+const ms = (v) => (v === null || v === undefined ? '—' : Math.round(v).toLocaleString() + 'ms');
+
+function tile(label, value, sub = '') {
+  return `<div class="kpi"><div class="label">${label}</div>` +
+         `<div class="value">${value}</div>` +
+         (sub ? `<div class="sub">${sub}</div>` : '') + `</div>`;
+}
+
+async function loadMetrics() {
+  const hours = $('mwindow').value;
+  $('mstatus').textContent = 'loading…';
+  try {
+    const [mRes, rRes] = await Promise.all([
+      fetch(`/v1/metrics?window_hours=${hours}`, { headers: authHeaders() }),
+      fetch('/v1/metrics/recent?limit=15', { headers: authHeaders() }),
+    ]);
+    if (!mRes.ok) {
+      $('mstatus').textContent = limitMessage(mRes, await mRes.text());
+      return;
+    }
+    const data = await mRes.json();
+    const recent = rRes.ok ? (await rRes.json()).requests : [];
+    render(data, recent);
+    $('mstatus').textContent = '';
+  } catch (e) {
+    $('mstatus').textContent = e.message;
+  }
+}
+
+function render(data, recent) {
+  const s = data.summary;
+  const body = $('mbody');
+
+  if (!s.requests) {
+    body.innerHTML =
+      '<div class="card"><div class="mempty">No requests recorded in this window.<br>' +
+      'Send a chat message or ask a docs question, then refresh.</div></div>';
+    return;
+  }
+
+  const hitPct = (s.cache_hit_rate * 100).toFixed(1);
+  const label = { 1: 'last hour', 24: 'last 24 hours', 168: 'last 7 days', 0: 'all time' }[
+    Number($('mwindow').value)
+  ];
+
+  // Exactly ONE hero figure per view. Spend is the number this dashboard leads
+  // with -- an LLM gateway's headline question is "what is this costing me".
+  const hero =
+    `<div class="hero">` +
+    `<div class="label">Spend · ${label}</div>` +
+    `<div class="value">${money(s.cost_usd.spent)}</div>` +
+    `<div class="sub">${compact(s.requests)} request${s.requests === 1 ? '' : 's'} · ` +
+    `${compact(s.tokens.total)} tokens` +
+    (Number(s.cost_usd.unpriced_requests)
+      ? ` · <span style="color:var(--warn)">${s.cost_usd.unpriced_requests} unpriced</span>`
+      : '') +
+    `</div></div>`;
+
+  const kpis =
+    `<div class="kpis">` +
+    tile('Requests', compact(s.requests), `${s.errors} error${s.errors === 1 ? '' : 's'}`) +
+    tile('Cache hit rate', hitPct + '%', `${s.cache_hits} of ${s.requests}`) +
+    tile('Saved by cache', money(s.cost_usd.saved_by_cache), 'avoided spend') +
+    tile('p95 latency', ms(s.latency_ms.p95), `p50 ${ms(s.latency_ms.p50)}`) +
+    `</div>`;
+
+  // A single ratio against a limit -> meter, not a two-slice pie.
+  const meter =
+    `<div class="card"><h3>Cache hit rate</h3>` +
+    `<div class="meter"><span style="width:${Math.min(100, hitPct)}%"></span></div>` +
+    `<div class="sub" style="color:var(--muted);font-size:11.5px;margin-top:6px">` +
+    `${hitPct}% of requests answered from cache · p99 ${ms(s.latency_ms.p99)}</div></div>`;
+
+  const byModel =
+    `<div class="card"><h3>By model</h3><table class="m">` +
+    `<tr><th>Provider</th><th>Model</th><th class="n">Requests</th>` +
+    `<th class="n">Hits</th><th class="n">Cost</th><th class="n">p95</th></tr>` +
+    data.by_model
+      .map(
+        (m) =>
+          `<tr><td>${esc(m.provider)}</td><td>${esc(m.model)}</td>` +
+          `<td class="n">${m.requests}</td><td class="n">${m.cache_hits}</td>` +
+          `<td class="n">${money(m.cost_usd)}</td><td class="n">${ms(m.p95_latency_ms)}</td></tr>`,
+      )
+      .join('') +
+    `</table></div>`;
+
+  const recentRows = recent
+    .map(
+      (r) =>
+        `<tr><td>${new Date(r.created_at).toLocaleTimeString()}</td>` +
+        `<td>${esc(r.endpoint)}</td><td>${esc(r.model)}</td>` +
+        `<td>${r.cached ? '<span class="pill">HIT</span>' : ''}</td>` +
+        `<td class="n">${r.input_tokens}</td><td class="n">${r.output_tokens}</td>` +
+        `<td class="n">${ms(r.latency_ms)}</td><td class="n">${money(r.cost_usd)}</td></tr>`,
+    )
+    .join('');
+
+  const recentCard =
+    `<div class="card"><h3>Recent requests</h3><table class="m">` +
+    `<tr><th>Time</th><th>Endpoint</th><th>Model</th><th></th>` +
+    `<th class="n">In</th><th class="n">Out</th><th class="n">Latency</th><th class="n">Cost</th></tr>` +
+    recentRows +
+    `</table></div>`;
+
+  body.innerHTML = hero + kpis + meter + byModel + recentCard;
+}
+
+$('mrefresh').onclick = loadMetrics;
+$('mwindow').onchange = loadMetrics;
+
+// ---- rendering ------------------------------------------------------------
+
+function addMsg(role, text = '', cls = '') {
+  if (log.querySelector('.empty')) log.innerHTML = '';
+  const el = document.createElement('div');
+  el.className = `msg ${cls || role}`;
+  el.innerHTML = `<div class="who"></div><div class="bubble"></div>`;
+  el.querySelector('.who').textContent = role;
+  el.querySelector('.bubble').textContent = text;
+  log.appendChild(el);
+  scroll();
+  return el;
+}
+
+const scroll = () => { $('log').scrollTop = $('log').scrollHeight; };
+
+function setBusy(busy) {
+  $('send').disabled = busy;
+  $('stop').disabled = !busy;
+  $('input').disabled = busy;
+}
+
+function renderSources(el, sources, { collapsed = true } = {}) {
+  const d = document.createElement('details');
+  d.className = 'src';
+  d.open = !collapsed;
+  const top = sources.length ? ` · best ${sources[0].similarity.toFixed(3)}` : '';
+  d.innerHTML = `<summary>${sources.length} source${sources.length === 1 ? '' : 's'}${top}</summary>`;
+  for (const s of sources) {
+    const item = document.createElement('div');
+    item.className = 'srcitem';
+    item.id = `src-${el.dataset.mid}-${s.n}`;
+    item.innerHTML =
+      `<div class="srchead">[${s.n}] ${esc(s.filename)} · chunk ${s.chunk_index} · similarity ${s.similarity.toFixed(4)}</div>`;
+    item.appendChild(document.createTextNode(s.excerpt));
+    d.appendChild(item);
+  }
+  el.appendChild(d);
+  scroll();
+  return d;
+}
+
+/** Turn [1] / [2] in the finished answer into clickable citation chips. */
+function linkCitations(bubble, el) {
+  const html = esc(bubble.textContent).replace(/\[(\d+)\]/g,
+    (m, n) => `<span class="cite" data-n="${n}">${n}</span>`);
+  bubble.innerHTML = html;
+  bubble.querySelectorAll('.cite').forEach((c) => {
+    c.onclick = () => {
+      const target = document.getElementById(`src-${el.dataset.mid}-${c.dataset.n}`);
+      if (!target) return;
+      target.closest('details').open = true;
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      target.classList.add('hi');
+      setTimeout(() => target.classList.remove('hi'), 1600);
+    };
+  });
+}
+
+// ---- send -----------------------------------------------------------------
+
+let msgSeq = 0;
+
+async function send() {
+  const text = $('input').value.trim();
+  if (!text || controller) return;
+
+  addMsg('you', text, 'user');
+  $('input').value = '';
+  $('input').style.height = 'auto';
+
+  if (mode === 'rag' && $('retrieveOnly').checked) return retrieveOnly(text);
+
+  const el = addMsg('assistant');
+  el.dataset.mid = String(++msgSeq);
+  const bubble = el.querySelector('.bubble');
+  bubble.classList.add('cursor');
+
+  let url, payload;
+  if (mode === 'rag') {
+    url = '/v1/rag/query';
+    payload = {
+      question: text,
+      top_k: Number($('topk').value) || 5,
+      min_similarity: Number($('minsim').value),
+    };
+  } else {
+    history.push({ role: 'user', content: text });
+    const messages = [];
+    const sys = $('sys').value.trim();
+    if (sys) messages.push({ role: 'system', content: sys });
+    messages.push(...history);
+    url = '/v1/chat';
+    payload = { messages };
+  }
+  if ($('provider').value) payload.provider = $('provider').value;
+  if ($('model').value.trim()) payload.model = $('model').value.trim();
+
+  controller = new AbortController();
+  setBusy(true);
+
+  const t0 = performance.now();
+  let ttft = null, answer = '', sourceCount = 0;
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: authHeaders({ 'content-type': 'application/json' }),
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+
+    // Failures *before* streaming starts arrive as a real HTTP status, because
+    // the server pulls the first event before committing to a 200.
+    if (!res.ok) {
+      let detail;
+      try { detail = (await res.json()).detail; } catch { detail = await res.text(); }
+      fail(el, bubble, limitMessage(res, detail));
+      return;
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      // {stream:true}: a multi-byte character can straddle two network chunks.
+      buf += decoder.decode(value, { stream: true });
+
+      let i;
+      while ((i = buf.indexOf('\n\n')) !== -1) {
+        const frame = buf.slice(0, i);
+        buf = buf.slice(i + 2);
+
+        let event = 'message', data = '';
+        for (const line of frame.split('\n')) {
+          if (line.startsWith('event: ')) event = line.slice(7);
+          else if (line.startsWith('data: ')) data += line.slice(6);
+        }
+        if (!data) continue;
+        const msg = JSON.parse(data);
+
+        if (event === 'sources') {
+          // Emitted before the first token on purpose, so citations can be
+          // rendered while the answer is still arriving.
+          sourceCount = msg.sources.length;
+          if (sourceCount) renderSources(el, msg.sources);
+        } else if (event === 'token') {
+          if (ttft === null) ttft = performance.now() - t0;
+          answer += msg.text;
+          bubble.textContent = answer;
+          scroll();
+        } else if (event === 'done') {
+          bubble.classList.remove('cursor');
+          if (mode === 'rag' && sourceCount) linkCitations(bubble, el);
+          const u = msg.usage;
+          const s = document.createElement('div');
+          s.className = 'stats';
+
+          if (msg.cached) {
+            // A cache hit spends no tokens and returns in ~1ms, so the usual
+            // token/TTFT numbers would all read zero and say nothing useful.
+            s.innerHTML =
+              `<span class="hit">CACHE HIT</span> · ` +
+              `similarity <b>${msg.cache_similarity}</b> · ` +
+              `<b>${msg.latency_ms}ms</b> · ` +
+              `saved <b>${msg.tokens_saved}</b> tok · ` +
+              `age ${Math.round(msg.cache_age_seconds)}s · ${msg.model}`;
+            if (msg.cached_question && msg.cache_similarity < 1) {
+              const q = document.createElement('div');
+              q.className = 'stats';
+              // Show which earlier question this answer was written for, so a
+              // wrong-looking answer is immediately explainable.
+              q.textContent = `matched earlier question: "${msg.cached_question}"`;
+              s.appendChild(q);
+            }
+          } else {
+            s.innerHTML =
+              `<b>${msg.provider}</b> · ${msg.model} · ` +
+              `in <b>${u.input_tokens}</b> / out <b>${u.output_tokens}</b> tok · ` +
+              `TTFT <b>${ttft === null ? '—' : Math.round(ttft) + 'ms'}</b> · ` +
+              `total <b>${Math.round(msg.latency_ms)}ms</b>` +
+              (msg.finish_reason === 'max_tokens'
+                ? ` · <span style="color:var(--err)">truncated (max_tokens)</span>` : '') +
+              (msg.finish_reason === 'no_context'
+                ? ` · <span style="color:var(--warn)">nothing cleared min_sim</span>` : '');
+          }
+          el.insertBefore(s, el.querySelector('details.src'));
+          if (mode === 'chat') history.push({ role: 'assistant', content: answer });
+          scroll();
+        } else if (event === 'error') {
+          // Mid-stream failure: the 200 is already sent, so this is the only
+          // channel left. It is terminal.
+          fail(el, bubble, msg.error, answer);
+          return;
+        }
+      }
+    }
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      bubble.classList.remove('cursor');
+      bubble.textContent = answer + '\n\n[stopped]';
+      if (mode === 'chat' && answer) history.push({ role: 'assistant', content: answer });
+    } else {
+      fail(el, bubble, err.message, answer);
+    }
+  } finally {
+    controller = null;
+    setBusy(false);
+    bubble.classList.remove('cursor');
+    $('input').focus();
+  }
+}
+
+/** Retrieval with no generation — costs embedding quota only, not chat quota. */
+async function retrieveOnly(question) {
+  const el = addMsg('retrieval', '', 'assistant');
+  el.dataset.mid = String(++msgSeq);
+  const bubble = el.querySelector('.bubble');
+  setBusy(true);
+  const t0 = performance.now();
+
+  try {
+    const res = await fetch('/v1/rag/retrieve', {
+      method: 'POST',
+      headers: authHeaders({ 'content-type': 'application/json' }),
+      body: JSON.stringify({
+        question,
+        top_k: Number($('topk').value) || 5,
+        min_similarity: Number($('minsim').value),
+      }),
+    });
+    if (!res.ok) {
+      let d; try { d = (await res.json()).detail; } catch { d = await res.text(); }
+      fail(el, bubble, limitMessage(res, d));
+      return;
+    }
+    const data = await res.json();
+    bubble.textContent = data.sources.length
+      ? `${data.sources.length} chunk(s) retrieved. No answer generated.`
+      : 'Nothing cleared the similarity floor — no chunks retrieved.';
+    if (data.sources.length) renderSources(el, data.sources, { collapsed: false });
+
+    const s = document.createElement('div');
+    s.className = 'stats';
+    s.innerHTML = `retrieval only · <b>${Math.round(performance.now() - t0)}ms</b> · no generation quota used`;
+    el.insertBefore(s, el.querySelector('details.src'));
+    scroll();
+  } catch (e) {
+    fail(el, bubble, e.message);
+  } finally {
+    setBusy(false);
+    $('input').focus();
+  }
+}
+
+function fail(el, bubble, message, partial = '') {
+  el.className = 'msg error';
+  el.querySelector('.who').textContent = 'error';
+  bubble.classList.remove('cursor');
+  bubble.textContent = (partial ? partial + '\n\n— ' : '') + message;
+  // Drop the user turn that failed so a retry doesn't duplicate it.
+  if (mode === 'chat' && !partial) history.pop();
+  scroll();
+}
+
+// ---- wiring ---------------------------------------------------------------
+
+$('send').onclick = send;
+$('stop').onclick = () => controller?.abort();
+$('mChat').onclick = () => setMode('chat');
+$('mRag').onclick = () => setMode('rag');
+$('mMetrics').onclick = () => setMode('metrics');
+$('reset').onclick = () => {
+  history = [];
+  log.innerHTML = '<div class="empty">Send a message to start.</div>';
+};
+$('toggleSys').onclick = () => {
+  const s = $('sys');
+  s.style.display = s.style.display === 'block' ? 'none' : 'block';
+  if (s.style.display === 'block') s.focus();
+};
+
+$('input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+});
+$('input').addEventListener('input', function () {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 180) + 'px';
+});
+$('apikey').value = localStorage.getItem('docxpo_api_key') || '';
+$('apikey').addEventListener('change', function () {
+  localStorage.setItem('docxpo_api_key', this.value.trim());
+});
+
+$('input').focus();
+</script>
+</body>
+</html>

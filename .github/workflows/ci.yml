@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    # Both tiers run here. The unit tier needs nothing; the integration tier
+    # needs real Postgres and Redis, so CI provides them as services rather
+    # than letting those 23 tests silently skip — a skipped test that always
+    # skips is indistinguishable from one that does not exist.
+    services:
+      postgres:
+        # pgvector pre-compiled; plain postgres:16 would need the extension
+        # built from source.
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: docxpo
+          POSTGRES_PASSWORD: docxpo
+          POSTGRES_DB: docxpo
+        ports: ["5432:5432"]
+        # pg_isready, not a port check: Postgres binds its port several seconds
+        # before it will accept queries.
+        options: >-
+          --health-cmd "pg_isready -U docxpo -d docxpo"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Migrate
+        # The integration tier probes for the tables and skips if they are
+        # absent, so without this step it would quietly skip in CI too.
+        env:
+          POSTGRES_HOST: localhost
+          REDIS_HOST: localhost
+        run: alembic upgrade head
+
+      - name: Test
+        env:
+          POSTGRES_HOST: localhost
+          REDIS_HOST: localhost
+          # No provider key in CI. Nothing in the suite makes a live LLM call —
+          # providers are faked — but the app's startup check would otherwise
+          # try to reach Gemini, so it is disabled here.
+          VALIDATE_PROVIDER_ON_STARTUP: "false"
+        run: pytest -q
+
+      - name: Confirm the integration tier actually ran
+        # Guards against the tier silently skipping and CI still going green,
+        # which would make the badge meaningless for exactly the tests that
+        # cover the database and the Lua script.
+        env:
+          POSTGRES_HOST: localhost
+          REDIS_HOST: localhost
+          VALIDATE_PROVIDER_ON_STARTUP: "false"
+        run: pytest tests/integration -q --no-header | tee /dev/stderr | grep -qE "[0-9]+ passed"
