@@ -3,224 +3,516 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>docXpo</title>
+<meta name="color-scheme" content="dark light">
+<title>docXpo console</title>
 <style>
+  /* -------------------------------------------------------------------------
+     Tokens.
+
+     Dark is the default because this console lives next to a terminal, not in
+     a browser tab full of marketing pages. Light is a full palette, not an
+     inversion -- a flipped dark theme reads muddy in daylight.
+
+     Two type roles, and the split carries meaning:
+       sans  speaks  -- prose, labels, answers
+       mono  measures -- endpoints, model ids, tokens, latency, similarity
+     No webfonts: the project ships without a CDN or a build step, so the
+     personality has to come from how the system stack is used, not from a
+     download.
+     ------------------------------------------------------------------------- */
   :root {
-    --bg:#0f1115; --panel:#171a21; --panel-2:#1e222b; --line:#2a2f3a;
-    --fg:#e6e9ef; --muted:#8b93a7; --accent:#6ea8fe; --user:#243044;
-    --err:#ff6b6b; --ok:#4ade80; --warn:#fbbf24; --accent-track:#25344d;
+    --bg:#0A0B0D; --surface:#121317; --surface-2:#181A1F; --surface-3:#1E2026;
+    --line:#26282F; --line-2:#33363F;
+    --fg:#EAEAE8; --fg-2:#B9BBC2; --muted:#7C7F88;
+    --accent:#8B7BF7; --accent-ink:#FFFFFF; --accent-soft:#1C1930; --accent-track:#2C2750;
+    --ok:#3FBF8F; --ok-soft:#0F231D; --ok-ink:#04170C;
+    --warn:#E0A458; --err:#F0616B; --err-soft:#26151A;
+    --user:#191B21;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    --r:8px; --r-lg:12px;
+    --side:264px;
   }
   @media (prefers-color-scheme: light) {
     :root {
-      --bg:#f6f7f9; --panel:#fff; --panel-2:#f0f2f5; --line:#dfe3ea;
-      --fg:#12151b; --muted:#5c6478; --accent:#2563eb; --user:#e6edfb;
-      --err:#c92a2a; --ok:#137a3b; --warn:#a16207; --accent-track:#cfe0fb;
+      --bg:#FAFAF9; --surface:#FFFFFF; --surface-2:#F4F4F2; --surface-3:#EDEDEA;
+      --line:#E4E4E0; --line-2:#D3D3CE;
+      --fg:#17181B; --fg-2:#4A4C52; --muted:#797B82;
+      --accent:#5B4BD6; --accent-ink:#FFFFFF; --accent-soft:#F0EEFD; --accent-track:#DCD7FA;
+      --ok:#12805C; --ok-soft:#E4F5EE; --ok-ink:#04170C;
+      --warn:#94600F; --err:#C8323C; --err-soft:#FCECEE;
+      --user:#F1F1EE;
     }
   }
+
   * { box-sizing:border-box; }
+  html, body { height:100%; }
   body {
-    margin:0; height:100vh; display:flex; flex-direction:column;
-    background:var(--bg); color:var(--fg);
-    font:14px/1.55 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    margin:0; background:var(--bg); color:var(--fg);
+    font:14px/1.6 var(--sans);
+    -webkit-font-smoothing:antialiased;
   }
-  header {
-    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
-    padding:10px 16px; border-bottom:1px solid var(--line); background:var(--panel);
-  }
-  header h1 { font-size:15px; margin:0; font-weight:650; letter-spacing:.2px; }
-  header .sp { flex:1; }
-  label { color:var(--muted); font-size:12px; }
-  select, textarea, input, button {
-    font:inherit; color:var(--fg); background:var(--panel-2);
-    border:1px solid var(--line); border-radius:8px; padding:6px 9px;
-  }
-  input[type=number] { width:64px; }
-  button { cursor:pointer; }
-  button:hover:not(:disabled) { border-color:var(--accent); }
-  button:disabled { opacity:.5; cursor:not-allowed; }
-  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
-  /* Segmented mode switch */
-  .seg { display:flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
-  .seg button { border:0; border-radius:0; background:var(--panel-2); padding:6px 12px; }
-  .seg button.on { background:var(--accent); color:#fff; font-weight:600; }
+  ::selection { background:var(--accent); color:var(--accent-ink); }
+  :focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }
+  ::-webkit-scrollbar { width:10px; height:10px; }
+  ::-webkit-scrollbar-thumb { background:var(--line-2); border-radius:99px; border:3px solid transparent; background-clip:content-box; }
+  ::-webkit-scrollbar-track { background:transparent; }
 
-  #docs { display:none; border-bottom:1px solid var(--line); background:var(--panel-2); padding:12px 16px; }
-  #docs.open { display:block; }
-  .docs-inner { max-width:860px; margin:0 auto; display:grid; gap:10px; }
-  .docs-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-  .doclist { display:grid; gap:6px; max-height:190px; overflow-y:auto; }
+  /* ---- shell ---- */
+  .app { display:flex; height:100%; }
+  .side {
+    width:var(--side); flex:0 0 var(--side); display:flex; flex-direction:column;
+    background:var(--surface); border-right:1px solid var(--line); overflow:hidden;
+  }
+  .main { flex:1; min-width:0; display:flex; flex-direction:column; }
+
+  /* ---- brand ---- */
+  .brand { display:flex; align-items:center; gap:9px; padding:14px 16px 12px; }
+  .mark {
+    width:24px; height:24px; border-radius:7px; background:var(--accent);
+    display:grid; place-items:center; color:var(--accent-ink); flex:none;
+  }
+  .brand b { font-size:14.5px; font-weight:600; letter-spacing:-.15px; }
+  .brand .ver { font:11px/1 var(--mono); color:var(--muted); margin-left:auto; }
+
+  /* ---- nav ---- */
+  .nav { padding:2px 10px 12px; display:grid; gap:1px; }
+  .nav button {
+    display:flex; align-items:center; gap:10px; width:100%; text-align:left;
+    padding:7px 9px; border:0; border-radius:var(--r); background:transparent;
+    color:var(--fg-2); font:inherit; font-size:13.5px; cursor:pointer;
+  }
+  .nav button:hover { background:var(--surface-2); color:var(--fg); }
+  .nav button.on { background:var(--accent-soft); color:var(--accent); font-weight:500; }
+  .nav svg { flex:none; }
+
+  /* ---- sidebar sections ---- */
+  .sec { border-top:1px solid var(--line); padding:12px 16px; }
+  .sec-h {
+    display:flex; align-items:center; gap:8px; margin-bottom:9px;
+    font-size:11px; font-weight:600; letter-spacing:.7px; text-transform:uppercase; color:var(--muted);
+  }
+  .sec-h .n { font-family:var(--mono); letter-spacing:0; font-weight:500; }
+  .sec-h .sp { flex:1; }
+  .icon-btn {
+    display:grid; place-items:center; width:22px; height:22px; padding:0;
+    border:0; border-radius:6px; background:transparent; color:var(--muted); cursor:pointer;
+  }
+  .icon-btn:hover { background:var(--surface-2); color:var(--fg); }
+
+  /* Documents pane fills the leftover sidebar height and scrolls on its own,
+     so a 60-document corpus never pushes the settings block off-screen. */
+  #docs { flex:1; min-height:0; display:flex; flex-direction:column; }
+  .drop {
+    border:1px dashed var(--line-2); border-radius:var(--r); padding:13px 10px;
+    text-align:center; cursor:pointer; transition:border-color .12s, background .12s;
+  }
+  .drop:hover, .drop.over { border-color:var(--accent); background:var(--accent-soft); }
+  .drop p { margin:5px 0 0; font-size:12.5px; color:var(--fg-2); }
+  .drop span { display:block; margin-top:2px; font:11px/1.4 var(--mono); color:var(--muted); }
+  .drop svg { color:var(--muted); }
+  .drop.over svg, .drop:hover svg { color:var(--accent); }
+  #file { display:none; }
+
+  .paste-row { display:grid; gap:6px; margin-top:9px; }
+  .doclist { margin-top:10px; flex:1; min-height:0; overflow-y:auto; display:grid; gap:2px; align-content:start; }
   .doc {
-    display:flex; align-items:center; gap:10px; padding:7px 10px;
-    background:var(--panel); border:1px solid var(--line); border-radius:8px; font-size:13px;
+    display:flex; align-items:center; gap:8px; padding:6px 8px;
+    border-radius:6px; font-size:12.5px; color:var(--fg-2);
   }
-  .doc .nm { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .doc .meta { color:var(--muted); font-size:11.5px; font-variant-numeric:tabular-nums; }
-  .doc button { padding:2px 8px; font-size:12px; }
+  .doc:hover { background:var(--surface-2); }
+  .doc .nm { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--fg); }
+  .doc .meta { font:11px/1 var(--mono); color:var(--muted); flex:none; }
+  .doc .icon-btn { opacity:0; flex:none; }
+  .doc:hover .icon-btn, .doc .icon-btn:focus-visible { opacity:1; }
+  .doc .icon-btn:hover { color:var(--err); }
 
-  #log { flex:1; overflow-y:auto; padding:18px 16px; }
-  .wrap { max-width:860px; margin:0 auto; }
-  .msg { margin-bottom:16px; }
-  .who { font-size:11px; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); margin-bottom:5px; }
-  .bubble {
-    background:var(--panel); border:1px solid var(--line); border-radius:10px;
-    padding:11px 13px; white-space:pre-wrap; word-wrap:break-word;
+  /* ---- settings block ---- */
+  .settings { border-top:1px solid var(--line); padding:11px 16px 14px; display:grid; gap:8px; }
+  .field { display:flex; align-items:center; gap:8px; }
+  .field > label {
+    flex:0 0 62px; font:11.5px/1 var(--mono); color:var(--muted);
   }
-  .msg.user .bubble { background:var(--user); }
-  .msg.error .bubble { border-color:var(--err); color:var(--err); }
-  .stats { margin-top:6px; font-size:11.5px; color:var(--muted); font-variant-numeric:tabular-nums; }
-  .stats b { color:var(--fg); font-weight:600; }
+  .field > select, .field > input { flex:1; min-width:0; }
 
-  /* Citation marker rendered inside the answer text. */
+  /* ---- controls ---- */
+  select, textarea, input, button { font:inherit; color:var(--fg); }
+  select, textarea, input[type=text], input[type=password], input[type=number] {
+    background:var(--surface-2); border:1px solid var(--line);
+    border-radius:6px; padding:5px 8px; font-size:13px; width:100%;
+  }
+  select:hover, input:hover, textarea:hover { border-color:var(--line-2); }
+  select:focus, input:focus, textarea:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+  input::placeholder, textarea::placeholder { color:var(--muted); }
+  input[type=number] { font-family:var(--mono); }
+
+  .btn {
+    display:inline-flex; align-items:center; gap:6px; cursor:pointer;
+    background:var(--surface-2); border:1px solid var(--line); color:var(--fg);
+    border-radius:6px; padding:5px 11px; font-size:13px;
+  }
+  .btn:hover:not(:disabled) { border-color:var(--line-2); background:var(--surface-3); }
+  .btn:active:not(:disabled) { transform:translateY(.5px); }
+  .btn:disabled { opacity:.45; cursor:not-allowed; }
+  .btn.primary { background:var(--accent); border-color:var(--accent); color:var(--accent-ink); font-weight:500; }
+  .btn.primary:hover:not(:disabled) { filter:brightness(1.08); }
+  .btn.sm { padding:3px 8px; font-size:12px; }
+
+  /* ---- topbar ---- */
+  .topbar {
+    display:flex; align-items:center; gap:12px; padding:12px 22px;
+    border-bottom:1px solid var(--line); background:var(--surface);
+  }
+  .topbar h1 { margin:0; font-size:15px; font-weight:600; letter-spacing:-.15px; }
+  .topbar .sub { font-size:12.5px; color:var(--muted); }
+  .topbar .sp { flex:1; }
+  #menu { display:none; }
+
+  /* The route pill. An LLM gateway's console should never leave you guessing
+     which endpoint the next Enter keypress will hit. */
+  .route {
+    display:inline-flex; align-items:center; gap:7px; padding:3px 9px 3px 3px;
+    border:1px solid var(--line); border-radius:99px; background:var(--surface-2);
+    font:11.5px/1.5 var(--mono); color:var(--fg-2); white-space:nowrap;
+  }
+  .route .m {
+    background:var(--accent); color:var(--accent-ink); border-radius:99px;
+    padding:2px 7px; font-size:10px; font-weight:600; letter-spacing:.3px;
+  }
+
+  /* ---- thread ---- */
+  #log { flex:1; overflow-y:auto; padding:26px 22px 8px; }
+  .wrap { max-width:780px; margin:0 auto; }
+  .msg { margin-bottom:26px; }
+  .who {
+    display:flex; align-items:center; gap:7px; margin-bottom:7px;
+    font:11px/1 var(--mono); letter-spacing:.4px; color:var(--muted);
+  }
+  .who::before {
+    content:''; width:5px; height:5px; border-radius:99px; background:var(--muted);
+  }
+  .msg.assistant .who::before { background:var(--accent); }
+  .msg.error .who::before { background:var(--err); }
+
+  /* User turns get a surface; assistant answers sit directly on the page.
+     Long RAG answers are documents, and documents read better unboxed. */
+  .bubble { white-space:pre-wrap; word-wrap:break-word; font-size:14.5px; line-height:1.68; }
+  .msg.user .bubble {
+    background:var(--user); border:1px solid var(--line);
+    border-radius:var(--r-lg); padding:11px 14px; color:var(--fg-2);
+  }
+  .msg.error .bubble {
+    background:var(--err-soft); border:1px solid var(--err);
+    border-radius:var(--r-lg); padding:11px 14px; color:var(--err);
+  }
+
+  /* ---- the receipt ----------------------------------------------------------
+     Every answer this gateway returns has a cost, a latency and a provider
+     behind it. That is the whole point of the product, so it gets a real
+     component instead of a grey sentence: a mono strip of label/value pairs.
+     A cache hit is a different strip, not a different colour of the same one. */
+  .stats {
+    display:flex; flex-wrap:wrap; align-items:center; gap:0 16px;
+    margin-top:12px; padding:8px 12px;
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--r);
+    font:11.5px/1.7 var(--mono); color:var(--muted);
+  }
+  .stats .k { color:var(--muted); }
+  .stats b { color:var(--fg); font-weight:500; font-variant-numeric:tabular-nums; }
+  .stats.hit { background:var(--ok-soft); border-color:var(--ok); }
+  .stats .warnv { color:var(--warn); }
+  .stats .errv { color:var(--err); }
+  .stats .note { flex-basis:100%; color:var(--muted); font-size:11px; }
+  .hit-badge {
+    background:var(--ok); color:var(--ok-ink); border-radius:4px;
+    padding:1px 6px; font-size:10px; font-weight:700; letter-spacing:.5px;
+  }
+
+  /* ---- citations + sources ---- */
   .cite {
-    display:inline-block; background:var(--accent); color:#fff; border-radius:4px;
-    padding:0 5px; font-size:11px; font-weight:700; cursor:pointer; vertical-align:1px;
+    display:inline-block; min-width:16px; text-align:center;
+    background:var(--accent-soft); color:var(--accent); border:1px solid var(--accent-track);
+    border-radius:4px; padding:0 4px; margin:0 1px;
+    font:10.5px/1.5 var(--mono); font-weight:600; cursor:pointer; vertical-align:1.5px;
   }
-  details.src { margin-top:8px; }
-  details.src > summary { cursor:pointer; color:var(--muted); font-size:12px; }
+  .cite:hover { background:var(--accent); color:var(--accent-ink); border-color:var(--accent); }
+  details.src { margin-top:10px; }
+  details.src > summary {
+    cursor:pointer; list-style:none; display:inline-flex; align-items:center; gap:6px;
+    font:11.5px/1 var(--mono); color:var(--muted); padding:5px 9px;
+    border:1px solid var(--line); border-radius:99px;
+  }
+  details.src > summary::-webkit-details-marker { display:none; }
+  details.src > summary:hover { color:var(--fg); border-color:var(--line-2); }
+  details.src[open] > summary { margin-bottom:8px; }
   .srcitem {
-    margin-top:6px; padding:8px 10px; background:var(--panel-2);
-    border:1px solid var(--line); border-left:3px solid var(--accent); border-radius:6px;
-    font-size:12.5px; white-space:pre-wrap;
+    margin-top:6px; padding:9px 11px; background:var(--surface);
+    border:1px solid var(--line); border-radius:var(--r);
+    font-size:13px; line-height:1.6; white-space:pre-wrap; color:var(--fg-2);
   }
-  .srcitem.hi { border-color:var(--warn); border-left-color:var(--warn); }
-  .srchead { color:var(--muted); font-size:11.5px; margin-bottom:4px; font-variant-numeric:tabular-nums; }
-  .hit {
-    background:var(--ok); color:#04170c; border-radius:4px;
-    padding:1px 6px; font-size:10.5px; font-weight:800; letter-spacing:.4px;
+  .srcitem.hi { border-color:var(--warn); background:var(--surface-2); }
+  .srchead {
+    display:flex; align-items:center; gap:9px; margin-bottom:6px;
+    font:11px/1 var(--mono); color:var(--muted);
   }
-  .cursor::after {
-    content:'▌'; margin-left:1px; color:var(--accent); animation:blink 1s steps(2) infinite;
+  .srchead .n {
+    background:var(--accent-soft); color:var(--accent); border-radius:4px;
+    padding:2px 5px; font-weight:600;
   }
+  .srchead .fn { color:var(--fg); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .srchead .sp { flex:1; }
+  /* Similarity is the number that decides whether a chunk was worth
+     retrieving, so it gets a bar as well as digits -- scannable down a list. */
+  .simbar { width:44px; height:3px; border-radius:99px; background:var(--accent-track); overflow:hidden; flex:none; }
+  .simbar > i { display:block; height:100%; background:var(--accent); }
+
+  .cursor::after { content:'▍'; margin-left:2px; color:var(--accent); animation:blink 1.05s steps(2) infinite; }
   @keyframes blink { 50% { opacity:0; } }
-  footer { border-top:1px solid var(--line); background:var(--panel); padding:12px 16px; }
-  .row { display:flex; gap:8px; align-items:flex-end; max-width:860px; margin:0 auto; }
-  textarea#input { flex:1; resize:none; min-height:44px; max-height:180px; }
-  .hint { max-width:860px; margin:6px auto 0; font-size:11px; color:var(--muted); }
-  #sys { display:none; max-width:860px; margin:0 auto 8px; width:100%; }
-  #ragctl { display:none; max-width:860px; margin:0 auto 8px; gap:10px; align-items:center; flex-wrap:wrap; }
+
+  /* ---- empty states ---- */
+  .empty { max-width:420px; margin:14vh auto 0; text-align:center; }
+  .empty h2 { margin:0 0 5px; font-size:15px; font-weight:600; }
+  .empty p { margin:0; color:var(--muted); font-size:13.5px; }
+  .empty .keys { margin-top:14px; font:11.5px/1.8 var(--mono); color:var(--muted); }
+  kbd {
+    font:11px/1 var(--mono); background:var(--surface-2); border:1px solid var(--line);
+    border-bottom-width:2px; border-radius:4px; padding:3px 5px; color:var(--fg-2);
+  }
+
+  /* ---- composer ---- */
+  footer { padding:8px 22px 20px; background:var(--bg); }
+  .composer-wrap { max-width:780px; margin:0 auto; }
+  #sys { display:none; margin-bottom:8px; font-size:13px; resize:vertical; }
+  .composer {
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg);
+    padding:4px 4px 4px; transition:border-color .12s, box-shadow .12s;
+  }
+  .composer:focus-within { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+  textarea#input {
+    width:100%; border:0; background:transparent; resize:none;
+    min-height:44px; max-height:190px; padding:9px 10px 4px; font-size:14.5px;
+  }
+  textarea#input:focus { outline:none; box-shadow:none; }
+  .composer-bar { display:flex; align-items:center; gap:10px; padding:4px 6px 5px; flex-wrap:wrap; }
+  .actions { display:flex; gap:7px; margin-left:auto; }
+  #ragctl { display:none; gap:12px; align-items:center; flex-wrap:wrap; }
   #ragctl.on { display:flex; }
-  .empty { color:var(--muted); text-align:center; margin-top:14vh; }
-  /* ---- metrics panel ---- */
-  #metrics { display:none; flex:1; overflow-y:auto; padding:18px 16px; }
+  #ragctl label { display:flex; align-items:center; gap:6px; font:11.5px/1 var(--mono); color:var(--muted); }
+  #ragctl input[type=number] { width:58px; padding:3px 6px; font-size:12px; }
+  #ragctl input[type=checkbox] { accent-color:var(--accent); width:14px; height:14px; }
+
+  /* ---- metrics ---- */
+  #metrics { display:none; flex:1; overflow-y:auto; padding:26px 22px 40px; }
   #metrics.on { display:block; }
-  .mwrap { max-width:940px; margin:0 auto; display:grid; gap:16px; }
-  .mrow { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .mwrap { max-width:940px; margin:0 auto; display:grid; gap:14px; }
+  .mrow { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:2px; }
+  .mrow label { display:flex; align-items:center; gap:7px; font:11.5px/1 var(--mono); color:var(--muted); }
+  .mrow select { width:auto; }
 
-  /* Hero figure: exactly one per view, >=48px, same sans as everything else.
-     Proportional figures (NOT tabular-nums) -- at display sizes tabular digits
-     give every glyph the width of a 0 and the number reads loose. */
-  .hero { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 18px; }
-  .hero .label { color:var(--muted); font-size:12px; margin-bottom:2px; }
-  .hero .value { font-size:52px; line-height:1.05; font-weight:600; letter-spacing:-1px; }
-  .hero .sub { color:var(--muted); font-size:12.5px; margin-top:4px; }
+  /* One hero figure per view. For a gateway the headline question is
+     "what is this costing me", so spend leads and everything else supports.
+     Proportional digits, not tabular: at 54px, tabular gives every glyph the
+     width of a zero and the number reads visibly loose. */
+  .hero { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); padding:18px 20px; }
+  .hero .label { font:11px/1 var(--mono); letter-spacing:.5px; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+  .hero .value { font-size:54px; line-height:1; font-weight:600; letter-spacing:-2px; }
+  .hero .sub { color:var(--muted); font:12px/1.6 var(--mono); margin-top:8px; }
 
-  /* KPI row of stat tiles: label (sentence case, no colon) + value. */
-  .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
-  .kpi { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:11px 13px; }
-  .kpi .label { color:var(--muted); font-size:11.5px; margin-bottom:3px; }
-  .kpi .value { font-size:24px; font-weight:600; line-height:1.2; }
-  .kpi .sub { color:var(--muted); font-size:11px; margin-top:2px; }
+  .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(158px,1fr)); gap:10px; }
+  .kpi { background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:11px 13px; }
+  .kpi .label { font:11px/1 var(--mono); color:var(--muted); margin-bottom:6px; }
+  .kpi .value { font-size:23px; font-weight:600; line-height:1.15; letter-spacing:-.4px; }
+  .kpi .sub { color:var(--muted); font:11px/1.5 var(--mono); margin-top:3px; }
 
-  /* Meter: a single ratio against a limit. The unfilled track is a LIGHTER STEP
-     OF THE SAME RAMP (not grey), so the state reads across the whole bar. */
-  .meter { height:8px; border-radius:999px; background:var(--accent-track); overflow:hidden; }
-  .meter > span { display:block; height:100%; background:var(--accent); border-radius:999px; }
+  /* A single ratio against a limit is a meter, not a two-slice pie. The
+     unfilled track is a lighter step of the same ramp, so the state reads
+     across the whole bar instead of stopping at the fill. */
+  .meter { height:7px; border-radius:99px; background:var(--accent-track); overflow:hidden; }
+  .meter > span { display:block; height:100%; background:var(--accent); border-radius:99px; }
 
-  .card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px 14px; }
-  .card h3 { margin:0 0 9px; font-size:12px; font-weight:650; color:var(--muted);
-             text-transform:uppercase; letter-spacing:.6px; }
+  .card { background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:13px 15px; }
+  .card h3 { margin:0 0 10px; font:11px/1 var(--mono); letter-spacing:.6px; text-transform:uppercase; color:var(--muted); font-weight:600; }
+  .card .cap { color:var(--muted); font:11.5px/1.5 var(--mono); margin-top:8px; }
+  .scroll-x { overflow-x:auto; margin:0 -15px; padding:0 15px; }
   table.m { width:100%; border-collapse:collapse; font-size:12.5px; }
-  table.m th { text-align:left; color:var(--muted); font-weight:600; font-size:11px;
-               text-transform:uppercase; letter-spacing:.4px; padding:4px 8px 6px; }
-  table.m td { padding:5px 8px; border-top:1px solid var(--line); }
-  /* tabular-nums belongs HERE -- columns of numbers that must align vertically. */
-  table.m td.n, table.m th.n { text-align:right; font-variant-numeric:tabular-nums; }
-  .pill { font-size:10.5px; font-weight:700; padding:1px 6px; border-radius:4px;
-          background:var(--ok); color:#04170c; }
-  .mempty { color:var(--muted); text-align:center; padding:28px 0; }
-  .toast { color:var(--muted); font-size:12px; }
+  table.m th {
+    text-align:left; padding:0 10px 7px 0; white-space:nowrap;
+    font:10.5px/1 var(--mono); letter-spacing:.5px; text-transform:uppercase; color:var(--muted); font-weight:600;
+  }
+  table.m td { padding:6px 10px 6px 0; border-top:1px solid var(--line); white-space:nowrap; }
+  table.m tr:hover td { background:var(--surface-2); }
+  table.m td.mono { font-family:var(--mono); font-size:12px; color:var(--fg-2); }
+  /* tabular-nums belongs here: columns of numbers that must align vertically. */
+  table.m td.n, table.m th.n { text-align:right; font-variant-numeric:tabular-nums; font-family:var(--mono); font-size:12px; padding-right:0; }
+  .pill { background:var(--ok); color:var(--ok-ink); border-radius:4px; padding:1px 5px; font:9.5px/1.6 var(--mono); font-weight:700; letter-spacing:.4px; }
+  .mempty { color:var(--muted); text-align:center; padding:34px 0; font-size:13.5px; }
+
+  .toast { font:11.5px/1.5 var(--mono); color:var(--muted); min-height:17px; }
   .toast.bad { color:var(--err); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::after { animation:none !important; transition:none !important; }
+  }
+
+  /* ---- responsive: sidebar becomes a drawer ---- */
+  @media (max-width:860px) {
+    .side {
+      position:fixed; inset:0 auto 0 0; z-index:20;
+      transform:translateX(-100%); transition:transform .16s ease;
+    }
+    .side.open { transform:none; }
+    #menu { display:grid; }
+    #scrim { position:fixed; inset:0; background:#0007; z-index:19; display:none; }
+    #scrim.on { display:block; }
+    #log, #metrics { padding-left:16px; padding-right:16px; }
+    footer { padding-left:16px; padding-right:16px; }
+    .topbar { padding:11px 16px; }
+    .topbar .route { display:none; }
+    .hero .value { font-size:42px; }
+  }
 </style>
 </head>
 <body>
 
-<header>
-  <h1>docXpo</h1>
-  <div class="seg">
-    <button id="mChat" class="on" type="button">Chat</button>
-    <button id="mRag" type="button">Ask docs</button>
-    <button id="mMetrics" type="button">Metrics</button>
-  </div>
-  <label>provider
-    <select id="provider">
-      <option value="">default</option>
-      <option value="gemini">gemini</option>
-      <option value="anthropic">anthropic</option>
-      <option value="openai">openai</option>
-      <option value="ollama">ollama</option>
-    </select>
-  </label>
-  <label>model <input id="model" placeholder="(default)" size="14"></label>
-  <span class="sp"></span>
-  <label>api key <input id="apikey" type="password" placeholder="(none)" size="12"></label>
-  <button id="toggleDocs" type="button">Documents</button>
-  <button id="toggleSys" type="button">system prompt</button>
-  <button id="reset" type="button">new chat</button>
-</header>
+<div class="app">
 
-<section id="docs">
-  <div class="docs-inner">
-    <div class="docs-row">
+  <aside class="side" id="side">
+    <div class="brand">
+      <span class="mark" aria-hidden="true">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v5h5"/><path d="M19 10v9a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7z"/></svg>
+      </span>
+      <b>docXpo</b>
+      <span class="ver">console</span>
+    </div>
+
+    <nav class="nav" aria-label="Views">
+      <button id="mChat" class="on" type="button">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.9 8.9 0 0 1-4-.9L3 21l1.9-4.9A8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4z"/></svg>
+        Chat
+      </button>
+      <button id="mRag" type="button">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        Ask docs
+      </button>
+      <button id="mMetrics" type="button">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+        Metrics
+      </button>
+    </nav>
+
+    <section class="sec" id="docs">
+      <div class="sec-h">
+        <span>Corpus</span>
+        <span class="n" id="doccount"></span>
+        <span class="sp"></span>
+        <button class="icon-btn" id="refresh" type="button" title="Refresh list" aria-label="Refresh document list">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>
+        </button>
+      </div>
+
+      <div class="drop" id="drop" tabindex="0" role="button" aria-label="Choose a file to index">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+        <p>Drop a file, or click to choose</p>
+        <span>pdf · txt · md · json · csv · py · js</span>
+      </div>
       <input type="file" id="file" accept=".pdf,.txt,.md,.json,.csv,.log,.py,.js,.html,application/pdf,text/*">
-      <button id="upload" type="button">Upload file</button>
-      <span class="sp"></span>
-      <button id="refresh" type="button">Refresh</button>
-      <span id="docmsg" class="toast"></span>
-    </div>
-    <div class="docs-row">
-      <textarea id="paste" rows="2" style="flex:1" placeholder="…or paste text to index"></textarea>
-      <button id="pasteBtn" type="button">Index text</button>
-    </div>
-    <div class="doclist" id="doclist"></div>
-  </div>
-</section>
 
-<div id="log"><div class="wrap"><div class="empty">Send a message to start.</div></div></div>
+      <div class="paste-row">
+        <textarea id="paste" rows="2" placeholder="…or paste text to index"></textarea>
+        <button class="btn sm" id="pasteBtn" type="button">Index pasted text</button>
+      </div>
 
-<section id="metrics">
-  <div class="mwrap">
-    <div class="mrow">
-      <label>window
-        <select id="mwindow">
-          <option value="1">last hour</option>
-          <option value="24" selected>last 24h</option>
-          <option value="168">last 7 days</option>
-          <option value="0">all time</option>
+      <div class="doclist" id="doclist"></div>
+      <div id="docmsg" class="toast"></div>
+    </section>
+
+    <div class="settings">
+      <div class="field">
+        <label for="provider">provider</label>
+        <select id="provider">
+          <option value="">default</option>
+          <option value="gemini">gemini</option>
+          <option value="anthropic">anthropic</option>
+          <option value="openai">openai</option>
+          <option value="ollama">ollama</option>
         </select>
-      </label>
-      <button id="mrefresh" type="button">Refresh</button>
-      <span id="mstatus" class="toast"></span>
+      </div>
+      <div class="field">
+        <label for="model">model</label>
+        <input id="model" type="text" placeholder="(provider default)">
+      </div>
+      <div class="field">
+        <label for="apikey">api key</label>
+        <input id="apikey" type="password" placeholder="(none)" autocomplete="off">
+      </div>
     </div>
-    <div id="mbody"></div>
-  </div>
-</section>
+  </aside>
 
-<footer>
-  <textarea id="sys" rows="2" placeholder="Optional system prompt — chat mode only (RAG supplies its own)"></textarea>
-  <div id="ragctl">
-    <label>top_k <input id="topk" type="number" min="1" max="20" value="5"></label>
-    <label>min_sim <input id="minsim" type="number" min="0" max="1" step="0.05" value="0.5"></label>
-    <label title="Retrieve chunks without generating an answer. Costs no generation quota.">
-      <input type="checkbox" id="retrieveOnly"> retrieve only
-    </label>
-  </div>
-  <div class="row">
-    <textarea id="input" rows="1" placeholder="Ask something…  (Enter to send, Shift+Enter for newline)"></textarea>
-    <button id="send" class="primary">Send</button>
-    <button id="stop" disabled>Stop</button>
-  </div>
-  <div class="hint" id="hint">Chat mode → <code>POST /v1/chat</code>. TTFT = time to first token.</div>
-</footer>
+  <main class="main">
+    <div class="topbar">
+      <button class="icon-btn" id="menu" type="button" aria-label="Toggle sidebar">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+      <h1 id="viewTitle">Chat</h1>
+      <span class="sub" id="viewSub">Straight to the model, no retrieval</span>
+      <span class="sp"></span>
+      <span class="route" id="hint"><span class="m">POST</span><code>/v1/chat</code></span>
+      <button class="btn" id="toggleSys" type="button">System prompt</button>
+      <button class="btn" id="reset" type="button">New chat</button>
+    </div>
+
+    <div id="log">
+      <div class="wrap">
+        <div class="empty">
+          <h2>Send a message to start</h2>
+          <p>Chat goes straight to the selected provider. Switch to Ask docs to answer from your indexed corpus instead.</p>
+          <div class="keys"><kbd>Enter</kbd> send &nbsp;·&nbsp; <kbd>Shift</kbd>+<kbd>Enter</kbd> newline</div>
+        </div>
+      </div>
+    </div>
+
+    <section id="metrics">
+      <div class="mwrap">
+        <div class="mrow">
+          <label for="mwindow">window
+            <select id="mwindow">
+              <option value="1">last hour</option>
+              <option value="24" selected>last 24h</option>
+              <option value="168">last 7 days</option>
+              <option value="0">all time</option>
+            </select>
+          </label>
+          <button class="btn sm" id="mrefresh" type="button">Refresh</button>
+          <span id="mstatus" class="toast"></span>
+        </div>
+        <div id="mbody"></div>
+      </div>
+    </section>
+
+    <footer>
+      <div class="composer-wrap">
+        <textarea id="sys" rows="2" placeholder="Optional system prompt — chat mode only (RAG supplies its own)"></textarea>
+        <div class="composer">
+          <textarea id="input" rows="1" placeholder="Ask something…"></textarea>
+          <div class="composer-bar">
+            <div id="ragctl">
+              <label>top_k <input id="topk" type="number" min="1" max="20" value="5"></label>
+              <label>min_sim <input id="minsim" type="number" min="0" max="1" step="0.05" value="0.5"></label>
+              <label title="Retrieve chunks without generating an answer. Costs no generation quota.">
+                <input type="checkbox" id="retrieveOnly"> retrieve only
+              </label>
+            </div>
+            <div class="actions">
+              <button class="btn" id="stop" disabled>Stop</button>
+              <button class="btn primary" id="send">Send</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </main>
+</div>
+<div id="scrim"></div>
 
 <script>
 // ---------------------------------------------------------------------------
@@ -234,7 +526,7 @@
 const $ = (id) => document.getElementById(id);
 const log = $('log').firstElementChild;
 
-let mode = 'chat';     // 'chat' | 'rag'
+let mode = 'chat';     // 'chat' | 'rag' | 'metrics'
 let history = [];      // chat mode only; RAG is single-shot per question
 let controller = null;
 
@@ -249,7 +541,7 @@ function authHeaders(base = {}) {
 
 /** Surface 401/429 clearly instead of as a generic failure. */
 function limitMessage(res, detail) {
-  if (res.status === 401) return 'Unauthorized — set your API key in the header field.';
+  if (res.status === 401) return 'Unauthorized — set your API key in the sidebar.';
   if (res.status === 429) {
     const retry = res.headers.get('Retry-After');
     return `Rate limited${retry ? ` — retry in ${retry}s` : ''}. `
@@ -261,26 +553,39 @@ function limitMessage(res, detail) {
 const esc = (s) => s.replace(/[&<>"]/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
+/** One place that knows what each view is called and where it posts. */
+const VIEWS = {
+  chat:    { title: 'Chat',    sub: 'Straight to the model, no retrieval',        route: '/v1/chat' },
+  rag:     { title: 'Ask docs', sub: 'Answers grounded in your indexed corpus',   route: '/v1/rag/query' },
+  metrics: { title: 'Metrics', sub: 'Spend, latency and cache across requests',   route: '/v1/metrics' },
+};
+
 function setMode(next) {
   mode = next;
   $('mChat').classList.toggle('on', next === 'chat');
   $('mRag').classList.toggle('on', next === 'rag');
   $('mMetrics').classList.toggle('on', next === 'metrics');
 
+  const v = VIEWS[next];
+  $('viewTitle').textContent = v.title;
+  $('viewSub').textContent = v.sub;
+  $('hint').innerHTML = `<span class="m">${next === 'metrics' ? 'GET' : 'POST'}</span><code>${v.route}</code>`;
+
   const showingMetrics = next === 'metrics';
   $('metrics').classList.toggle('on', showingMetrics);
   $('log').style.display = showingMetrics ? 'none' : 'block';
   document.querySelector('footer').style.display = showingMetrics ? 'none' : 'block';
+  $('toggleSys').style.display = showingMetrics ? 'none' : '';
+  $('reset').style.display = showingMetrics ? 'none' : '';
   if (showingMetrics) { loadMetrics(); return; }
+
   $('ragctl').classList.toggle('on', next === 'rag');
-  $('sys').style.display = next === 'rag' ? 'none' : $('sys').style.display;
-  $('hint').innerHTML = next === 'rag'
-    ? 'RAG mode → <code>POST /v1/rag/query</code>. Answers use only your indexed documents.'
-    : 'Chat mode → <code>POST /v1/chat</code>. TTFT = time to first token.';
+  if (next === 'rag') $('sys').style.display = 'none';
   $('input').placeholder = next === 'rag'
     ? 'Ask about your documents…'
-    : 'Ask something…  (Enter to send, Shift+Enter for newline)';
+    : 'Ask something…';
   if (next === 'rag') loadDocs();
+  closeDrawer();
 }
 
 // ---- documents ------------------------------------------------------------
@@ -297,8 +602,9 @@ async function loadDocs() {
     const res = await fetch('/v1/documents?limit=100', { headers: authHeaders() });
     const data = await res.json();
     const list = $('doclist');
+    $('doccount').textContent = data.documents.length ? String(data.documents.length) : '';
     if (!data.documents.length) {
-      list.innerHTML = '<div class="toast">No documents indexed yet.</div>';
+      list.innerHTML = '<div class="toast">Nothing indexed yet.</div>';
       return;
     }
     list.innerHTML = '';
@@ -307,9 +613,13 @@ async function loadDocs() {
       row.className = 'doc';
       row.innerHTML =
         `<span class="nm"></span>` +
-        `<span class="meta">${d.chunk_count} chunk${d.chunk_count === 1 ? '' : 's'} · ${d.char_count.toLocaleString()} chars</span>` +
-        `<button type="button">delete</button>`;
-      row.querySelector('.nm').textContent = d.filename;
+        `<span class="meta">${d.chunk_count}c</span>` +
+        `<button class="icon-btn" type="button" aria-label="Delete document">` +
+        `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>` +
+        `</button>`;
+      const nm = row.querySelector('.nm');
+      nm.textContent = d.filename;
+      nm.title = `${d.filename} · ${d.chunk_count} chunk${d.chunk_count === 1 ? '' : 's'} · ${d.char_count.toLocaleString()} chars`;
       row.querySelector('button').onclick = async () => {
         if (!confirm(`Delete "${d.filename}" and its chunks?`)) return;
         const r = await fetch(`/v1/documents/${d.id}`, { method: 'DELETE', headers: authHeaders() });
@@ -324,7 +634,7 @@ async function loadDocs() {
 }
 
 async function ingest(fn) {
-  docMsg('indexing… (embedding can take a few seconds)');
+  docMsg('indexing… (embedding takes a few seconds)');
   try {
     const res = await fn();
     if (!res.ok) {
@@ -333,21 +643,29 @@ async function ingest(fn) {
       return;
     }
     const doc = await res.json();
-    docMsg(`indexed "${doc.filename}" → ${doc.chunk_count} chunks`);
+    docMsg(`indexed ${doc.filename} — ${doc.chunk_count} chunks`);
     loadDocs();
   } catch (e) {
     docMsg(e.message, true);
   }
 }
 
-$('upload').onclick = () => {
-  const f = $('file').files[0];
+function uploadFile(f) {
   if (!f) return docMsg('choose a file first', true);
   const body = new FormData();
   body.append('file', f);
   // No content-type header: the browser must set the multipart boundary itself.
   ingest(() => fetch('/v1/documents', { method: 'POST', body, headers: authHeaders() }));
-};
+}
+
+$('drop').onclick = () => $('file').click();
+$('drop').onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('file').click(); } };
+$('file').onchange = function () { if (this.files[0]) { uploadFile(this.files[0]); this.value = ''; } };
+['dragenter', 'dragover'].forEach((ev) =>
+  $('drop').addEventListener(ev, (e) => { e.preventDefault(); $('drop').classList.add('over'); }));
+['dragleave', 'drop'].forEach((ev) =>
+  $('drop').addEventListener(ev, (e) => { e.preventDefault(); $('drop').classList.remove('over'); }));
+$('drop').addEventListener('drop', (e) => uploadFile(e.dataTransfer.files[0]));
 
 $('pasteBtn').onclick = () => {
   const content = $('paste').value.trim();
@@ -360,10 +678,6 @@ $('pasteBtn').onclick = () => {
 };
 
 $('refresh').onclick = loadDocs;
-$('toggleDocs').onclick = () => {
-  $('docs').classList.toggle('open');
-  if ($('docs').classList.contains('open')) loadDocs();
-};
 
 // ---- metrics ---------------------------------------------------------------
 
@@ -434,7 +748,7 @@ function render(data, recent) {
   // with -- an LLM gateway's headline question is "what is this costing me".
   const hero =
     `<div class="hero">` +
-    `<div class="label">Spend · ${label}</div>` +
+    `<div class="label">spend · ${label}</div>` +
     `<div class="value">${money(s.cost_usd.spent)}</div>` +
     `<div class="sub">${compact(s.requests)} request${s.requests === 1 ? '' : 's'} · ` +
     `${compact(s.tokens.total)} tokens` +
@@ -445,9 +759,9 @@ function render(data, recent) {
 
   const kpis =
     `<div class="kpis">` +
-    tile('Requests', compact(s.requests), `${s.errors} error${s.errors === 1 ? '' : 's'}`) +
-    tile('Cache hit rate', hitPct + '%', `${s.cache_hits} of ${s.requests}`) +
-    tile('Saved by cache', money(s.cost_usd.saved_by_cache), 'avoided spend') +
+    tile('requests', compact(s.requests), `${s.errors} error${s.errors === 1 ? '' : 's'}`) +
+    tile('cache hit rate', hitPct + '%', `${s.cache_hits} of ${s.requests}`) +
+    tile('saved by cache', money(s.cost_usd.saved_by_cache), 'avoided spend') +
     tile('p95 latency', ms(s.latency_ms.p95), `p50 ${ms(s.latency_ms.p50)}`) +
     `</div>`;
 
@@ -455,28 +769,27 @@ function render(data, recent) {
   const meter =
     `<div class="card"><h3>Cache hit rate</h3>` +
     `<div class="meter"><span style="width:${Math.min(100, hitPct)}%"></span></div>` +
-    `<div class="sub" style="color:var(--muted);font-size:11.5px;margin-top:6px">` +
-    `${hitPct}% of requests answered from cache · p99 ${ms(s.latency_ms.p99)}</div></div>`;
+    `<div class="cap">${hitPct}% of requests answered from cache · p99 ${ms(s.latency_ms.p99)}</div></div>`;
 
   const byModel =
-    `<div class="card"><h3>By model</h3><table class="m">` +
+    `<div class="card"><h3>By model</h3><div class="scroll-x"><table class="m">` +
     `<tr><th>Provider</th><th>Model</th><th class="n">Requests</th>` +
     `<th class="n">Hits</th><th class="n">Cost</th><th class="n">p95</th></tr>` +
     data.by_model
       .map(
         (m) =>
-          `<tr><td>${esc(m.provider)}</td><td>${esc(m.model)}</td>` +
+          `<tr><td class="mono">${esc(m.provider)}</td><td class="mono">${esc(m.model)}</td>` +
           `<td class="n">${m.requests}</td><td class="n">${m.cache_hits}</td>` +
           `<td class="n">${money(m.cost_usd)}</td><td class="n">${ms(m.p95_latency_ms)}</td></tr>`,
       )
       .join('') +
-    `</table></div>`;
+    `</table></div></div>`;
 
   const recentRows = recent
     .map(
       (r) =>
-        `<tr><td>${new Date(r.created_at).toLocaleTimeString()}</td>` +
-        `<td>${esc(r.endpoint)}</td><td>${esc(r.model)}</td>` +
+        `<tr><td class="mono">${new Date(r.created_at).toLocaleTimeString()}</td>` +
+        `<td class="mono">${esc(r.endpoint)}</td><td class="mono">${esc(r.model)}</td>` +
         `<td>${r.cached ? '<span class="pill">HIT</span>' : ''}</td>` +
         `<td class="n">${r.input_tokens}</td><td class="n">${r.output_tokens}</td>` +
         `<td class="n">${ms(r.latency_ms)}</td><td class="n">${money(r.cost_usd)}</td></tr>`,
@@ -484,11 +797,11 @@ function render(data, recent) {
     .join('');
 
   const recentCard =
-    `<div class="card"><h3>Recent requests</h3><table class="m">` +
+    `<div class="card"><h3>Recent requests</h3><div class="scroll-x"><table class="m">` +
     `<tr><th>Time</th><th>Endpoint</th><th>Model</th><th></th>` +
     `<th class="n">In</th><th class="n">Out</th><th class="n">Latency</th><th class="n">Cost</th></tr>` +
     recentRows +
-    `</table></div>`;
+    `</table></div></div>`;
 
   body.innerHTML = hero + kpis + meter + byModel + recentCard;
 }
@@ -528,8 +841,18 @@ function renderSources(el, sources, { collapsed = true } = {}) {
     const item = document.createElement('div');
     item.className = 'srcitem';
     item.id = `src-${el.dataset.mid}-${s.n}`;
+    // The similarity bar reads as a column down the list, so a chunk that only
+    // just cleared the floor is obvious without comparing four decimal places.
     item.innerHTML =
-      `<div class="srchead">[${s.n}] ${esc(s.filename)} · chunk ${s.chunk_index} · similarity ${s.similarity.toFixed(4)}</div>`;
+      `<div class="srchead">` +
+      `<span class="n">${s.n}</span>` +
+      `<span class="fn"></span>` +
+      `<span class="sp"></span>` +
+      `<span>chunk ${s.chunk_index}</span>` +
+      `<span class="simbar"><i style="width:${Math.round(Math.max(0, Math.min(1, s.similarity)) * 100)}%"></i></span>` +
+      `<span>${s.similarity.toFixed(4)}</span>` +
+      `</div>`;
+    item.querySelector('.fn').textContent = s.filename;
     item.appendChild(document.createTextNode(s.excerpt));
     d.appendChild(item);
   }
@@ -541,7 +864,7 @@ function renderSources(el, sources, { collapsed = true } = {}) {
 /** Turn [1] / [2] in the finished answer into clickable citation chips. */
 function linkCitations(bubble, el) {
   const html = esc(bubble.textContent).replace(/\[(\d+)\]/g,
-    (m, n) => `<span class="cite" data-n="${n}">${n}</span>`);
+    (m, n) => `<span class="cite" data-n="${n}" title="Jump to source ${n}">${n}</span>`);
   bubble.innerHTML = html;
   bubble.querySelectorAll('.cite').forEach((c) => {
     c.onclick = () => {
@@ -554,6 +877,9 @@ function linkCitations(bubble, el) {
     };
   });
 }
+
+/** One label/value pair in the receipt strip. */
+const stat = (k, v) => `<span><span class="k">${k}</span> <b>${v}</b></span>`;
 
 // ---- send -----------------------------------------------------------------
 
@@ -660,15 +986,18 @@ async function send() {
           if (msg.cached) {
             // A cache hit spends no tokens and returns in ~1ms, so the usual
             // token/TTFT numbers would all read zero and say nothing useful.
+            // It gets its own strip rather than a recoloured one.
+            s.className = 'stats hit';
             s.innerHTML =
-              `<span class="hit">CACHE HIT</span> · ` +
-              `similarity <b>${msg.cache_similarity}</b> · ` +
-              `<b>${msg.latency_ms}ms</b> · ` +
-              `saved <b>${msg.tokens_saved}</b> tok · ` +
-              `age ${Math.round(msg.cache_age_seconds)}s · ${msg.model}`;
+              `<span class="hit-badge">CACHE HIT</span>` +
+              stat('similarity', msg.cache_similarity) +
+              stat('latency', msg.latency_ms + 'ms') +
+              stat('saved', msg.tokens_saved + ' tok') +
+              stat('age', Math.round(msg.cache_age_seconds) + 's') +
+              stat('model', msg.model);
             if (msg.cached_question && msg.cache_similarity < 1) {
               const q = document.createElement('div');
-              q.className = 'stats';
+              q.className = 'note';
               // Show which earlier question this answer was written for, so a
               // wrong-looking answer is immediately explainable.
               q.textContent = `matched earlier question: "${msg.cached_question}"`;
@@ -676,14 +1005,16 @@ async function send() {
             }
           } else {
             s.innerHTML =
-              `<b>${msg.provider}</b> · ${msg.model} · ` +
-              `in <b>${u.input_tokens}</b> / out <b>${u.output_tokens}</b> tok · ` +
-              `TTFT <b>${ttft === null ? '—' : Math.round(ttft) + 'ms'}</b> · ` +
-              `total <b>${Math.round(msg.latency_ms)}ms</b>` +
+              stat('provider', esc(msg.provider)) +
+              stat('model', esc(msg.model)) +
+              stat('in', u.input_tokens) +
+              stat('out', u.output_tokens) +
+              stat('ttft', ttft === null ? '—' : Math.round(ttft) + 'ms') +
+              stat('total', Math.round(msg.latency_ms) + 'ms') +
               (msg.finish_reason === 'max_tokens'
-                ? ` · <span style="color:var(--err)">truncated (max_tokens)</span>` : '') +
+                ? `<span class="errv">truncated (max_tokens)</span>` : '') +
               (msg.finish_reason === 'no_context'
-                ? ` · <span style="color:var(--warn)">nothing cleared min_sim</span>` : '');
+                ? `<span class="warnv">nothing cleared min_sim</span>` : '');
           }
           el.insertBefore(s, el.querySelector('details.src'));
           if (mode === 'chat') history.push({ role: 'assistant', content: answer });
@@ -743,7 +1074,8 @@ async function retrieveOnly(question) {
 
     const s = document.createElement('div');
     s.className = 'stats';
-    s.innerHTML = `retrieval only · <b>${Math.round(performance.now() - t0)}ms</b> · no generation quota used`;
+    s.innerHTML = stat('retrieval only', Math.round(performance.now() - t0) + 'ms')
+                + `<span class="k">no generation quota used</span>`;
     el.insertBefore(s, el.querySelector('details.src'));
     scroll();
   } catch (e) {
@@ -766,6 +1098,13 @@ function fail(el, bubble, message, partial = '') {
 
 // ---- wiring ---------------------------------------------------------------
 
+function closeDrawer() { $('side').classList.remove('open'); $('scrim').classList.remove('on'); }
+$('menu').onclick = () => {
+  const open = $('side').classList.toggle('open');
+  $('scrim').classList.toggle('on', open);
+};
+$('scrim').onclick = closeDrawer;
+
 $('send').onclick = send;
 $('stop').onclick = () => controller?.abort();
 $('mChat').onclick = () => setMode('chat');
@@ -773,7 +1112,10 @@ $('mRag').onclick = () => setMode('rag');
 $('mMetrics').onclick = () => setMode('metrics');
 $('reset').onclick = () => {
   history = [];
-  log.innerHTML = '<div class="empty">Send a message to start.</div>';
+  log.innerHTML =
+    '<div class="empty"><h2>Send a message to start</h2>' +
+    '<p>Chat goes straight to the selected provider. Switch to Ask docs to answer from your indexed corpus instead.</p>' +
+    '<div class="keys"><kbd>Enter</kbd> send &nbsp;·&nbsp; <kbd>Shift</kbd>+<kbd>Enter</kbd> newline</div></div>';
 };
 $('toggleSys').onclick = () => {
   const s = $('sys');
@@ -786,13 +1128,14 @@ $('input').addEventListener('keydown', (e) => {
 });
 $('input').addEventListener('input', function () {
   this.style.height = 'auto';
-  this.style.height = Math.min(this.scrollHeight, 180) + 'px';
+  this.style.height = Math.min(this.scrollHeight, 190) + 'px';
 });
 $('apikey').value = localStorage.getItem('docxpo_api_key') || '';
 $('apikey').addEventListener('change', function () {
   localStorage.setItem('docxpo_api_key', this.value.trim());
 });
 
+loadDocs();
 $('input').focus();
 </script>
 </body>
