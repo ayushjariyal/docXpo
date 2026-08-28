@@ -539,12 +539,37 @@ function authHeaders(base = {}) {
   return k ? { ...base, 'X-API-Key': k } : base;
 }
 
+/**
+ * Read a failed response's body exactly once, then try to parse it as JSON.
+ * A Response body can only be consumed a single time -- calling res.json()
+ * and, on failure, falling back to res.text() throws "body already consumed",
+ * because res.json() drains the stream before it discovers the JSON is
+ * invalid. Reading as text first and parsing that string avoids the double
+ * read entirely.
+ */
+async function errorDetail(res) {
+  const raw = await res.text();
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed.detail ?? parsed;
+  } catch {
+    return raw;
+  }
+}
+
 /** Surface 401/429 clearly instead of as a generic failure. */
 function limitMessage(res, detail) {
   if (res.status === 401) return 'Unauthorized — set your API key in the sidebar.';
-  if (res.status === 429) {
+  // Two different things share HTTP 429: docXpo's own per-key limiter
+  // (detail.type === "RateLimitExceeded", from rate_limit_middleware.py), and
+  // an upstream provider's own rate/quota limit forwarded as-is (detail.type
+  // is a ProviderError subclass name, e.g. "ProviderRateLimited"). The local
+  // limiter's headers are stamped on *every* response regardless of which one
+  // fired, so checking detail.type -- not just the status code -- is the only
+  // reliable way to tell them apart.
+  if (res.status === 429 && detail?.type === 'RateLimitExceeded') {
     const retry = res.headers.get('Retry-After');
-    return `Rate limited${retry ? ` — retry in ${retry}s` : ''}. `
+    return `Rate limited by docXpo${retry ? ` — retry in ${retry}s` : ''}. `
          + `${res.headers.get('X-RateLimit-Limit') ?? '?'}/min allowed.`;
   }
   return typeof detail === 'string' ? detail : (detail?.error ?? JSON.stringify(detail));
@@ -638,8 +663,7 @@ async function ingest(fn) {
   try {
     const res = await fn();
     if (!res.ok) {
-      let d; try { d = (await res.json()).detail; } catch { d = await res.text(); }
-      docMsg(limitMessage(res, d), true);
+      docMsg(limitMessage(res, await errorDetail(res)), true);
       return;
     }
     const doc = await res.json();
@@ -937,9 +961,7 @@ async function send() {
     // Failures *before* streaming starts arrive as a real HTTP status, because
     // the server pulls the first event before committing to a 200.
     if (!res.ok) {
-      let detail;
-      try { detail = (await res.json()).detail; } catch { detail = await res.text(); }
-      fail(el, bubble, limitMessage(res, detail));
+      fail(el, bubble, limitMessage(res, await errorDetail(res)));
       return;
     }
 
@@ -1062,8 +1084,7 @@ async function retrieveOnly(question) {
       }),
     });
     if (!res.ok) {
-      let d; try { d = (await res.json()).detail; } catch { d = await res.text(); }
-      fail(el, bubble, limitMessage(res, d));
+      fail(el, bubble, limitMessage(res, await errorDetail(res)));
       return;
     }
     const data = await res.json();
