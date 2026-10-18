@@ -2,15 +2,20 @@
 
 The pipeline is deliberately small and linear:
 
-    decode -> chunk -> embed (batched) -> insert -> commit
+    clean -> chunk -> embed (batched, rate-limit aware) -> insert -> commit
 
 Everything expensive is the embedding step, which is why it is batched rather
-than looped one chunk at a time.
+than looped one chunk at a time -- and why it runs *before* anything touches the
+database. On a free embedding tier a large document can spend minutes waiting
+out rate limits; holding a transaction (and a pooled connection) open for that
+long would be wasteful on any database and fatal on a serverless one.
 """
 
 from __future__ import annotations
 
+import asyncio
 import uuid
+from collections.abc import Sequence
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,8 +23,10 @@ from app.core.config import Settings
 from app.core.logging import get_logger
 from app.db.models.document import Document
 from app.llm.embeddings import EmbeddingProvider
+from app.llm.errors import ProviderRateLimited
 from app.repositories.document_repository import DocumentRepository
 from app.services.chunking import chunk_text
+from app.services.extraction import clean_text
 from app.services.semantic_cache import SemanticCache
 
 log = get_logger(__name__)
@@ -28,6 +35,15 @@ log = get_logger(__name__)
 # payload limits while still amortising the round trip over many chunks -- a
 # 300-chunk document is 3 calls instead of 300.
 EMBED_BATCH_SIZE = 100
+
+# Waiting out embedding rate limits. Gemini's free tier allows 100 embeddings a
+# minute and counts every chunk in a batch, so a 1,000-chunk document needs ten
+# windows. A per-minute limit says "retry in ~30s"; anything far longer than a
+# minute is a daily cap, and waiting it out inside an HTTP request is not an
+# option -- so that one fails immediately instead.
+EMBED_MAX_RETRIES = 5          # consecutive 429s on one batch before giving up
+EMBED_DEFAULT_WAIT_S = 60.0    # when the provider doesn't say how long
+EMBED_GIVE_UP_AFTER_S = 120.0  # a longer requested wait means a daily cap
 
 
 class EmptyDocumentError(ValueError):
@@ -51,6 +67,9 @@ class DocumentService:
     async def ingest(
         self, *, filename: str, content_type: str, content: str
     ) -> Document:
+        # Here rather than in the upload route: this is the one place every
+        # ingestion path (file upload, PDF, pasted text) passes through.
+        content = clean_text(content)
         chunks = chunk_text(
             content,
             size=self._settings.chunk_size,
@@ -59,20 +78,17 @@ class DocumentService:
         if not chunks:
             raise EmptyDocumentError("document contains no text to index")
 
-        document = await self._repo.create_document(
-            filename=filename, content_type=content_type, content=content
-        )
-
+        # Embed everything first, with no transaction open (see module docstring).
         vectors: list[list[float]] = []
         for start in range(0, len(chunks), EMBED_BATCH_SIZE):
             batch = chunks[start : start + EMBED_BATCH_SIZE]
-            # task="document" matters: Gemini encodes passages and questions
-            # asymmetrically, and using the query encoding here would quietly
-            # cost recall. See app/llm/embeddings.py.
             vectors.extend(
-                await self._embedder.embed([c.text for c in batch], task="document")
+                await self._embed_batch([c.text for c in batch], filename=filename)
             )
 
+        document = await self._repo.create_document(
+            filename=filename, content_type=content_type, content=content
+        )
         await self._repo.add_chunks(
             document,
             [
@@ -98,6 +114,39 @@ class DocumentService:
             chunks=len(chunks),
         )
         return document
+
+    async def _embed_batch(
+        self, texts: Sequence[str], *, filename: str
+    ) -> list[list[float]]:
+        """Embed one batch, waiting out per-minute rate limits.
+
+        Retries only `ProviderRateLimited`: a per-minute window reopens on its
+        own, so waiting is the correct response. Every other provider error
+        (bad key, bad request, outage) is raised at once -- waiting would not
+        fix it.
+        """
+        for attempt in range(EMBED_MAX_RETRIES + 1):
+            try:
+                # task="document" matters: Gemini encodes passages and questions
+                # asymmetrically, and using the query encoding here would quietly
+                # cost recall. See app/llm/embeddings.py.
+                return await self._embedder.embed(texts, task="document")
+            except ProviderRateLimited as exc:
+                requested = exc.retry_after
+                if attempt == EMBED_MAX_RETRIES or (
+                    requested is not None and requested > EMBED_GIVE_UP_AFTER_S
+                ):
+                    raise
+                # +1s so we land just after the window reopens, not just before.
+                wait = (requested if requested is not None else EMBED_DEFAULT_WAIT_S) + 1
+                log.warning(
+                    "embedding_rate_limited_waiting",
+                    filename=filename,
+                    attempt=attempt + 1,
+                    wait_seconds=round(wait, 1),
+                )
+                await asyncio.sleep(wait)
+        raise AssertionError("unreachable")  # the loop always returns or raises
 
     async def _invalidate_cache(self) -> None:
         if self._cache is not None:

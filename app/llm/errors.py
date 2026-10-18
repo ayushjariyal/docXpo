@@ -51,6 +51,14 @@ class ProviderRateLimited(ProviderError):
     status_code = 429
     retryable = True
 
+    def __init__(
+        self, message: str, *, provider: str | None = None, retry_after: float | None = None
+    ) -> None:
+        super().__init__(message, provider=provider)
+        # Seconds the provider asked us to wait, when it said. Lets a caller
+        # tell a per-minute limit (wait it out) from a daily cap (give up).
+        self.retry_after = retry_after
+
 
 class ProviderAuthError(ProviderError):
     """Bad or missing credentials.

@@ -69,6 +69,17 @@ _BINARY_SIGNATURES: tuple[tuple[bytes, str], ...] = (
 )
 
 
+def clean_text(text: str) -> str:
+    """Remove characters Postgres cannot store in a TEXT column.
+
+    NUL (U+0000) is the one that bites: PostgreSQL rejects it outright
+    ("invalid byte sequence for encoding UTF8: 0x00"), and some PDFs carry it
+    in their text layer, so pypdf hands it through. It never carries meaning in
+    extracted prose, so dropping it is lossless.
+    """
+    return text.replace("\x00", "")
+
+
 def _looks_like_text(raw: bytes) -> bool:
     """Heuristic: does this decode as UTF-8 without heavy corruption?
 

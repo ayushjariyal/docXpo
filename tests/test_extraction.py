@@ -15,6 +15,7 @@ import pytest
 from app.services.extraction import (
     NoExtractableText,
     UnsupportedFileType,
+    clean_text,
     extract,
     extract_pdf,
 )
@@ -209,3 +210,10 @@ def test_nul_bytes_mean_binary() -> None:
 
     with pytest.raises(UnsupportedFileType):
         extract(raw, filename="x.txt", content_type="text/plain")
+
+
+def test_clean_text_strips_nul_and_keeps_everything_else() -> None:
+    """Some PDFs carry NUL in their text layer; Postgres refuses to store it."""
+    raw = "Dijk\x00stra\x00 driving\n distance — ok"
+
+    assert clean_text(raw) == "Dijkstra driving\n distance — ok"

@@ -13,6 +13,7 @@ that is not optional.
 from __future__ import annotations
 
 import math
+import re
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from typing import ClassVar, Literal
@@ -193,8 +194,22 @@ def _translate_gemini(exc: genai_errors.APIError, provider: str) -> ProviderErro
     if code in (401, 403) or (code == 400 and "api key" in detail.lower()):
         return ProviderAuthError(f"Gemini rejected our credentials: {detail}", provider=provider)
     if code == 429:
-        return ProviderRateLimited(f"Gemini quota exceeded: {detail}", provider=provider)
+        return ProviderRateLimited(
+            f"Gemini quota exceeded: {detail}",
+            provider=provider,
+            retry_after=parse_retry_after(detail),
+        )
     return ProviderError(f"Gemini embedding error: {detail}", provider=provider)
+
+
+# Google states the wait in the error text: "...Please retry in 27.563311189s."
+_RETRY_IN = re.compile(r"retry in\s+([\d.]+)\s*s", re.IGNORECASE)
+
+
+def parse_retry_after(detail: str) -> float | None:
+    """Seconds to wait, if the provider's message says; otherwise None."""
+    m = _RETRY_IN.search(detail)
+    return float(m.group(1)) if m else None
 
 
 _EMBEDDERS: dict[str, type[EmbeddingProvider]] = {

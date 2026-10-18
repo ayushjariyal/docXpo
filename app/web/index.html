@@ -343,7 +343,7 @@
         </select>
       </label>
       <label><span>Model</span>
-        <input class="input" id="model" type="text" placeholder="(provider default)">
+        <input class="input" id="model" type="text" placeholder="(server default)">
       </label>
       <label><span>API key</span>
         <input class="input" id="apikey" type="password" placeholder="(none)" autocomplete="off">
@@ -440,7 +440,6 @@ const VIEWS = {
   rag:     { title: 'Ask docs', sub: 'Answers grounded in your indexed corpus',  route: '/v1/rag/query', method: 'POST' },
   metrics: { title: 'Metrics',  sub: 'Spend, latency and cache across requests', route: '/v1/metrics',   method: 'GET' },
 };
-const DEFAULT_MODELS = { gemini: 'gemini-flash-latest', anthropic: 'claude-sonnet-4-6', openai: 'gpt-4o-mini', ollama: 'llama3.2' };
 const WINDOWS = [['1', '1h'], ['24', '24h'], ['168', '7d'], ['0', 'All time']];
 const WINDOW_LABEL = { 1: 'last hour', 24: 'last 24 hours', 168: 'last 7 days', 0: 'all time' };
 
@@ -636,12 +635,13 @@ function setView(v) {
 
 // ---- documents -------------------------------------------------------------
 
-function docMsg(text, bad = false) {
+/** Show a status line under the corpus. Sticky lines stay until replaced. */
+function docMsg(text, bad = false, sticky = false) {
   const el = $('docmsg');
   el.textContent = text;
   el.className = 'docmsg' + (bad ? ' bad' : '');
   clearTimeout(docTimer);
-  if (text) docTimer = setTimeout(() => { if (el.textContent === text) el.textContent = ''; }, 4000);
+  if (text && !sticky) docTimer = setTimeout(() => { if (el.textContent === text) el.textContent = ''; }, 4000);
 }
 
 function renderDocs() {
@@ -677,17 +677,34 @@ async function loadDocs() {
   }
 }
 
-async function ingest(fn) {
-  docMsg('indexing… (embedding takes a few seconds)');
+// Above roughly this size a document is more than ~100 chunks, which is one
+// minute's worth of Gemini's free embedding quota -- the server then waits out
+// the limit between batches, so indexing takes minutes rather than seconds.
+const LARGE_UPLOAD_BYTES = 100 * 1024;
+
+async function ingest(fn, bytes = 0) {
+  const large = bytes > LARGE_UPLOAD_BYTES;
+  const t0 = Date.now();
+  const status = () => {
+    const s = Math.round((Date.now() - t0) / 1000);
+    return large
+      ? `indexing a large file… ${s}s. The free embedding tier allows ~100 chunks a minute, so this can take several minutes. Keep this tab open.`
+      : 'indexing… (embedding takes a few seconds)';
+  };
+  docMsg(status(), false, true);
+  // A ticking clock, so a multi-minute wait reads as progress, not a hang.
+  const tick = large ? setInterval(() => docMsg(status(), false, true), 1000) : null;
   try {
     const res = await fn();
-    if (!res.ok) { docMsg(limitMessage(res, await errorDetail(res)), true); return false; }
+    clearInterval(tick);
+    if (!res.ok) { docMsg(limitMessage(res, await errorDetail(res)), true, true); return false; }
     const doc = await res.json();
     docMsg(`indexed ${doc.filename} — ${plural(doc.chunk_count, 'chunk')}`);
     loadDocs();
     return true;
   } catch (e) {
-    docMsg(e.message, true);
+    clearInterval(tick);
+    docMsg(e.message, true, true);
     return false;
   }
 }
@@ -697,7 +714,7 @@ function uploadFile(f) {
   const body = new FormData();
   body.append('file', f);
   // No content-type header: the browser must set the multipart boundary itself.
-  ingest(() => fetch('/v1/documents', { method: 'POST', body, headers: headers() }));
+  ingest(() => fetch('/v1/documents', { method: 'POST', body, headers: headers() }), f.size);
 }
 
 async function indexPaste() {
@@ -707,7 +724,7 @@ async function indexPaste() {
     method: 'POST',
     headers: headers({ 'content-type': 'application/json' }),
     body: JSON.stringify({ filename: 'pasted.txt', content }),
-  }));
+  }), content.length);
   if (ok) $('paste').value = '';
 }
 
@@ -1173,7 +1190,10 @@ $('doclist').addEventListener('click', (e) => {
   if (b) deleteDoc(b.dataset.del);
 });
 
-$('provider').onchange = () => { $('model').placeholder = DEFAULT_MODELS[$('provider').value] || '(provider default)'; };
+// The placeholder stays generic: the server's model comes from its own env
+// (e.g. OPENAI_MODEL pointing at Groq), which this page cannot see, so naming
+// a hard-coded model here would be a guess that is often wrong.
+$('provider').onchange = () => { $('model').placeholder = '(server default)'; };
 // Kept in localStorage: this is a console, and retyping the key on every
 // reload would make it unusable. localStorage is readable by any script on
 // this origin, which is acceptable here and would not be for a product page.
