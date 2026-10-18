@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/modernist-fac9e086-0ffd-491b-abc6-af521f192aad/styles.css">
+<script src="_ds/modernist-fac9e086-0ffd-491b-abc6-af521f192aad/_ds_bundle.js"></script>
+<style>body{margin:0;background:#e4e2e1;font-family:var(--font-body)}a{color:var(--color-accent)}a:hover{color:var(--color-accent-600)}.dv-turn{padding:40px 44px 32px;border-bottom:2px solid var(--color-divider);scroll-margin-top:16px}.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}.dv-tid{font:800 11px var(--font-body);padding:3px 7px;background:var(--color-text);color:var(--color-bg);text-decoration:none}.dv-tname{font:800 15px/1.2 var(--font-body);color:var(--color-text)}.dv-opts{display:flex;flex-direction:column;gap:48px;align-items:flex-start}.dv-opt{flex:none;display:flex;flex-direction:column;gap:12px;scroll-margin-top:16px}.dv-oid{font:800 11px var(--font-body);padding:3px 7px;background:rgba(0,0,0,.1);color:var(--color-text);text-decoration:none}.dv-olabel{display:flex;align-items:baseline;gap:10px;font:400 14px/1.4 var(--font-body);color:var(--color-neutral-800)}.dv-olabel b{font-weight:800;color:var(--color-text)}.dv-row{display:flex;gap:28px;align-items:flex-start}.dv-cap{font:800 11px var(--font-body);letter-spacing:.1em;text-transform:uppercase;color:var(--color-neutral-700);margin:0 0 8px}.dv-card{background:var(--color-bg);border:2px solid var(--color-text);overflow:hidden;width:1280px;height:800px}.dv-opt:target .dv-oid{background:var(--color-accent);color:#fff}.dv-next{margin:28px 0 0;font:14px/1.5 var(--font-body);color:var(--color-neutral-700)}</style>
+</helmet>
+<section class="dv-turn" id="t1">
+  <div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">docXpo console in Modernist: three layouts, each shown across Chat, Ask docs and Metrics</span></div>
+  <div style="max-width:880px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px;background:var(--color-divider);border:2px solid var(--color-divider);margin:0 0 36px">
+    <div style="background:var(--color-bg);padding:16px 18px;display:flex;flex-direction:column;gap:6px"><span class="dv-cap" style="margin:0">Source</span><span style="font-size:13px;line-height:1.5">Rebuilt from <b>app/web/index.html</b>: same views, endpoints, SSE parsing, receipt strip, citations, corpus and settings. Copy and behaviours carried over.</span></div>
+    <div style="background:var(--color-bg);padding:16px 18px;display:flex;flex-direction:column;gap:6px"><span class="dv-cap" style="margin:0">Data</span><span style="font-size:13px;line-height:1.5">Calls the same-origin <b>/v1</b> API. With no docXpo server here the consoles switch to mock data, labelled <b>MOCK DATA</b>, so every screen still works.</span></div>
+    <div style="background:var(--color-bg);padding:16px 18px;display:flex;flex-direction:column;gap:6px"><span class="dv-cap" style="margin:0">Try</span><span style="font-size:13px;line-height:1.5">Every frame is live. Send a message, click a [n] citation, ask the same docs question twice for a cache hit, switch windows on Metrics, toggle dark.</span></div>
+  </div>
+  <div class="dv-opts">
+    <div class="dv-opt" id="1a">
+      <div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a><b>Ledger</b>The current sidebar-plus-main structure, redrawn on the grid with 2px rules and a red active row.</div>
+      <div class="dv-row">
+        <div><div class="dv-cap">Chat</div><div class="dv-card"><dc-import name="DocxpoConsole" layout="ledger" initial-view="chat" hint-size="1280px,800px" style="width:1280px;height:800px;display:block"></dc-import></div></div>
+        <div><div class="dv-cap">Ask docs</div><div class="dv-card"><dc-import name="DocxpoConsole" layout="ledger" initial-view="rag" hint-size="1280px,800px" style="width:1280px;height:800px;display:block"></dc-import></div></div>
+        <div><div class="dv-cap">Metrics</div><div class="dv-card"><dc-import name="DocxpoConsole" layout="ledger" initial-view="metrics" hint-size="1280px,800px" style="width:1280px;height:800px;display:block"></dc-import></div></div>
+      </div>
+    </div>
+    <div class="dv-opt" id="1b">
+      <div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a><b>Poster</b>A red header field carries the view title at display size; tabs live in the header, corpus and settings in a left rail.</div>
+      <div class="dv-row">
+        <div><div class="dv-cap">Chat</div><div class="dv-card"><dc-import name="DocxpoConsole" layout="poster" initial-view="chat" hint-size="1280px,800px" style="width:1280px;height:800px;display:block"></dc-import></div></div>
+        <div><div class="dv-cap">Ask docs</div><div class="dv-card"><dc-import name="DocxpoConsole" layout="poster" initial-view="rag" hint-size="1280px,800px" style="width:1280px;height:800px;display:block"></dc-import></div></div>
+        <div><div class="dv-cap">Metrics</div><div class="dv-card"><dc-import name="DocxpoConsole" layout="poster" initial-view="metrics" hint-size="1280px,800px" style="width:1280px;height:800px;display:block"></dc-import></div></div>
+      </div>
+    </div>
+    <div class="dv-opt" id="1c">
+      <div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a><b>Grid</b>A modular workbench: nav cells with live stats, and an inspector column that holds the selected answer’s receipt and sources.</div>
+      <div class="dv-row">
+        <div><div class="dv-cap">Chat</div><div class="dv-card"><dc-import name="DocxpoConsole" layout="grid" initial-view="chat" hint-size="1280px,800px" style="width:1280px;height:800px;display:block"></dc-import></div></div>
+        <div><div class="dv-cap">Ask docs</div><div class="dv-card"><dc-import name="DocxpoConsole" layout="grid" initial-view="rag" hint-size="1280px,800px" style="width:1280px;height:800px;display:block"></dc-import></div></div>
+        <div><div class="dv-cap">Metrics · dark</div><div class="dv-card"><dc-import name="DocxpoConsole" layout="grid" initial-view="metrics" theme="dark" hint-size="1280px,800px" style="width:1280px;height:800px;display:block"></dc-import></div></div>
+      </div>
+    </div>
+  </div>
+  <p class="dv-next">Try next: "go with <a class="dv-oid" href="#1c">1c</a> but use the red header from <a class="dv-oid" href="#1b">1b</a>" · "make <a class="dv-oid" href="#1a">1a</a> the shipping console and export it as app/web/index.html" · "add a mobile drawer layout"</p>
+</section>
+</x-dc>
+</body>
+</html>

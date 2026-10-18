@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/modernist-fac9e086-0ffd-491b-abc6-af521f192aad/styles.css">
+<script src="_ds/modernist-fac9e086-0ffd-491b-abc6-af521f192aad/_ds_bundle.js"></script>
+<script src="docxpo-api.js"></script>
+<style>
+html,body{height:100%;margin:0}
+a{color:var(--color-accent)}a:hover{color:var(--color-accent-600)}
+@keyframes dxblink{50%{opacity:0}}
+[data-dx-theme]{--dx-on-accent:#f8f4f4}
+[data-dx-theme="dark"]{color-scheme:dark;--color-bg:#181615;--color-surface:#242120;--color-text:#f3f2f2;--color-divider:color-mix(in srgb,#f3f2f2 30%,transparent);--color-neutral-100:#2d2b2b;--color-neutral-200:#444141;--color-neutral-300:#605d5d;--color-neutral-400:#7d7979;--color-neutral-500:#9b9797;--color-neutral-600:#bab6b6;--color-neutral-700:#c9c5c5;--color-neutral-800:#eae7e7;--color-neutral-900:#f8f4f4;--color-accent-100:#3a140d;--color-accent-200:#5e1708;--color-accent-300:#7c1405;--color-accent-700:#ff9783;--color-accent-800:#ffc4b8;--color-accent-900:#ffe0d9;--shadow-lg:0 12px 32px rgba(0,0,0,.5)}
+</style>
+</helmet>
+<div data-dx-theme="{{ theme }}" style="height:100%;min-height:560px;display:flex;flex-direction:column;background:var(--color-bg);color:var(--color-text);font-family:var(--font-body);font-size:15px;line-height:1.55;overflow:hidden">
+
+<sc-if value="{{ isPoster }}" hint-placeholder-val="{{ false }}">
+<header style="flex:none;display:flex;flex-direction:column;background:var(--color-accent);color:var(--dx-on-accent)">
+  <div style="display:flex;align-items:center;gap:32px;padding:14px 32px;border-bottom:2px solid color-mix(in srgb,var(--dx-on-accent) 45%,transparent)">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="width:28px;height:28px;display:grid;place-items:center;background:var(--dx-on-accent);color:var(--color-accent)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v5h5"></path><path d="M19 10v9a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7z"></path></svg></span>
+      <span style="font-size:20px;font-weight:800;letter-spacing:-.02em">docXpo</span>
+    </div>
+    <nav style="display:flex;gap:24px">
+      <sc-for list="{{ nav }}" as="n" hint-placeholder-count="3">
+        <button type="button" onClick="{{ n.onClick }}" style="background:transparent;border:0;border-bottom:3px solid {{ n.tabBorder }};color:inherit;font:inherit;font-size:15px;font-weight:{{ n.tabWeight }};padding:6px 0;cursor:pointer;display:flex;align-items:center;gap:8px">{{ n.label }}</button>
+      </sc-for>
+    </nav>
+    <span style="flex:1"></span>
+    <span title="{{ modeTitle }}" style="display:inline-flex;align-items:center;gap:7px;border:1px solid var(--dx-on-accent);padding:3px 10px;font-size:11px;font-weight:800;letter-spacing:.08em">{{ modeLabel }}</span>
+    <button type="button" onClick="{{ onTheme }}" aria-label="Toggle theme" style="width:36px;height:36px;display:grid;place-items:center;background:transparent;border:1px solid var(--dx-on-accent);color:inherit;cursor:pointer;padding:0">
+      <sc-if value="{{ isLight }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg></sc-if>
+      <sc-if value="{{ isDark }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg></sc-if>
+    </button>
+  </div>
+  <div style="display:flex;align-items:flex-end;gap:24px;padding:28px 32px 24px;flex-wrap:wrap">
+    <div style="display:flex;flex-direction:column;gap:8px;min-width:0">
+      <h1 style="margin:0;font-size:68px;line-height:.92;letter-spacing:-.035em;color:inherit">{{ title }}</h1>
+      <span style="font-size:16px;font-weight:600">{{ sub }}</span>
+    </div>
+    <span style="flex:1"></span>
+    <span style="display:inline-flex;border:1px solid var(--dx-on-accent);font-size:13px;font-weight:600"><span style="background:var(--dx-on-accent);color:var(--color-accent);padding:5px 9px;font-weight:800">{{ method }}</span><span style="padding:5px 10px">{{ route }}</span></span>
+    <sc-if value="{{ isChat }}"><button type="button" onClick="{{ onToggleSys }}" class="btn" style="border:1px solid var(--dx-on-accent);color:inherit">{{ sysLabel }}</button></sc-if>
+    <sc-if value="{{ notMetrics }}"><button type="button" onClick="{{ onNew }}" class="btn" style="background:var(--dx-on-accent);color:var(--color-accent)">{{ newLabel }}</button></sc-if>
+  </div>
+</header>
+</sc-if>
+
+<sc-if value="{{ isGrid }}" hint-placeholder-val="{{ false }}">
+<div style="flex:none;display:flex;height:76px;border-bottom:2px solid var(--color-divider)">
+  <div style="width:288px;flex:none;display:flex;align-items:center;gap:10px;padding:0 20px;border-right:2px solid var(--color-divider)">
+    <span style="width:28px;height:28px;display:grid;place-items:center;background:var(--color-accent);color:var(--dx-on-accent)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v5h5"></path><path d="M19 10v9a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7z"></path></svg></span>
+    <span style="font-size:20px;font-weight:800;letter-spacing:-.02em">docXpo</span>
+    <span style="margin-left:auto;font-size:12px;color:var(--color-neutral-700)">console</span>
+  </div>
+  <sc-for list="{{ nav }}" as="n" hint-placeholder-count="3">
+    <button type="button" onClick="{{ n.onClick }}" style="flex:1;min-width:0;border:0;border-right:2px solid var(--color-divider);background:{{ n.bg }};color:{{ n.fg }};font:inherit;text-align:left;padding:0 20px;display:flex;flex-direction:column;justify-content:center;gap:3px;cursor:pointer">
+      <span style="display:flex;align-items:center;gap:8px;font-size:15px;font-weight:800">
+        <sc-if value="{{ n.isChat }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></sc-if>
+        <sc-if value="{{ n.isRag }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg></sc-if>
+        <sc-if value="{{ n.isMetrics }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M18 17V9"></path><path d="M13 17V5"></path><path d="M8 17v-3"></path></svg></sc-if>
+        {{ n.label }}
+      </span>
+      <span style="font-size:12px;opacity:.8;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ n.stat }}</span>
+    </button>
+  </sc-for>
+  <div style="width:320px;flex:none;display:flex;align-items:center;gap:10px;padding:0 20px">
+    <span class="tag tag-neutral" title="{{ modeTitle }}" style="gap:7px;font-weight:600;letter-spacing:.06em"><span style="width:7px;height:7px;background:{{ modeDot }}"></span>{{ modeLabel }}</span>
+    <span style="flex:1"></span>
+    <button type="button" class="btn btn-secondary btn-icon" onClick="{{ onTheme }}" aria-label="Toggle theme">
+      <sc-if value="{{ isLight }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg></sc-if>
+      <sc-if value="{{ isDark }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg></sc-if>
+    </button>
+  </div>
+</div>
+</sc-if>
+
+<div style="flex:1;min-height:0;display:flex">
+
+<aside style="width:{{ sideW }};flex:none;display:flex;flex-direction:column;min-height:0;border-right:2px solid var(--color-divider)">
+  <sc-if value="{{ isLedger }}" hint-placeholder-val="{{ true }}">
+    <div style="display:flex;align-items:center;gap:10px;padding:0 20px;height:72px;flex:none;border-bottom:2px solid var(--color-divider)">
+      <span style="width:28px;height:28px;display:grid;place-items:center;background:var(--color-accent);color:var(--dx-on-accent)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v5h5"></path><path d="M19 10v9a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7z"></path></svg></span>
+      <span style="font-size:20px;font-weight:800;letter-spacing:-.02em">docXpo</span>
+      <span style="margin-left:auto;font-size:12px;color:var(--color-neutral-700)">console</span>
+    </div>
+    <nav style="display:flex;flex-direction:column;flex:none;border-bottom:2px solid var(--color-divider)">
+      <sc-for list="{{ nav }}" as="n" hint-placeholder-count="3">
+        <button type="button" onClick="{{ n.onClick }}" style="display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:0;border-bottom:1px solid var(--color-divider);background:{{ n.bg }};color:{{ n.fg }};font:inherit;font-size:15px;font-weight:{{ n.tabWeight }};padding:12px 20px;cursor:pointer">
+          <sc-if value="{{ n.isChat }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></sc-if>
+          <sc-if value="{{ n.isRag }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg></sc-if>
+          <sc-if value="{{ n.isMetrics }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M18 17V9"></path><path d="M13 17V5"></path><path d="M8 17v-3"></path></svg></sc-if>
+          <span style="flex:1">{{ n.label }}</span>
+          <span style="font-size:11px;font-weight:600;opacity:.8">{{ n.method }}</span>
+        </button>
+      </sc-for>
+    </nav>
+  </sc-if>
+
+  <section style="flex:1;min-height:0;display:flex;flex-direction:column;gap:12px;padding:16px 20px">
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase">Corpus</span>
+      <span style="font-size:12px;color:var(--color-neutral-700);font-variant-numeric:tabular-nums">{{ docCount }}</span>
+      <span style="flex:1"></span>
+      <button type="button" class="btn btn-secondary" onClick="{{ onRefreshDocs }}" aria-label="Refresh document list" title="Refresh list" style="width:30px;height:30px;padding:0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg></button>
+    </div>
+    <div role="button" tabIndex="0" onClick="{{ onPick }}" onKeyDown="{{ onPickKey }}" onDragOver="{{ onDragOver }}" onDragLeave="{{ onDragLeave }}" onDrop="{{ onDrop }}" aria-label="Choose a file to index" style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:14px;border:2px dashed {{ dropBorder }};background:{{ dropBg }};cursor:pointer">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--color-accent)"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" x2="12" y1="3" y2="15"></line></svg>
+      <span style="font-size:14px;font-weight:600">Drop a file, or click to choose</span>
+      <span style="font-size:12px;color:var(--color-neutral-700)">pdf · txt · md · json · csv · py · js</span>
+    </div>
+    <input type="file" ref="{{ fileRef }}" onChange="{{ onFile }}" accept=".pdf,.txt,.md,.json,.csv,.log,.py,.js,.html,application/pdf,text/*" style="display:none">
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <textarea class="input" value="{{ paste }}" onChange="{{ onPaste }}" placeholder="…or paste text to index" style="min-height:56px;font-size:13px"></textarea>
+      <button type="button" class="btn btn-secondary" onClick="{{ onIndexPaste }}" style="justify-content:flex-start;font-size:13px">Index pasted text</button>
+    </div>
+    <div style="flex:1;min-height:0;overflow-y:auto;border-top:2px solid var(--color-divider)">
+      <sc-if value="{{ noDocs }}" hint-placeholder-val="{{ false }}"><div style="padding:12px 0;font-size:13px;color:var(--color-neutral-700)">Nothing indexed yet.</div></sc-if>
+      <sc-for list="{{ docs }}" as="d" hint-placeholder-count="4">
+        <div title="{{ d.title }}" style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--color-divider);font-size:13px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;color:var(--color-neutral-600)"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg>
+          <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600">{{ d.name }}</span>
+          <span style="flex:none;font-size:12px;color:var(--color-neutral-700);font-variant-numeric:tabular-nums">{{ d.meta }}</span>
+          <sc-if value="{{ d.pending }}"><button type="button" onClick="{{ d.onDelete }}" class="btn btn-primary" style="padding:3px 8px;font-size:11px">Delete?</button></sc-if>
+          <sc-if value="{{ d.idle }}"><button type="button" onClick="{{ d.onDelete }}" aria-label="Delete document" class="btn" style="width:26px;height:26px;padding:0;color:var(--color-neutral-600)" style-hover="color:var(--color-accent)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg></button></sc-if>
+        </div>
+      </sc-for>
+    </div>
+    <div style="min-height:18px;font-size:12px;color:{{ docMsgColor }}">{{ docMsg }}</div>
+  </section>
+
+  <div style="flex:none;display:flex;flex-direction:column;gap:8px;padding:14px 20px 18px;border-top:2px solid var(--color-divider)">
+    <label style="display:flex;align-items:center;gap:10px;font-size:12px;color:var(--color-neutral-700)"><span style="width:58px;flex:none">Provider</span>
+      <select class="input" value="{{ provider }}" onChange="{{ onProvider }}" style="min-height:32px;padding:4px 8px;font-size:13px">
+        <option value="">default</option><option value="gemini">gemini</option><option value="anthropic">anthropic</option><option value="openai">openai</option><option value="ollama">ollama</option>
+      </select>
+    </label>
+    <label style="display:flex;align-items:center;gap:10px;font-size:12px;color:var(--color-neutral-700)"><span style="width:58px;flex:none">Model</span>
+      <input class="input" type="text" value="{{ model }}" onChange="{{ onModel }}" placeholder="{{ modelPlaceholder }}" style="min-height:32px;padding:4px 8px;font-size:13px">
+    </label>
+    <label style="display:flex;align-items:center;gap:10px;font-size:12px;color:var(--color-neutral-700)"><span style="width:58px;flex:none">API key</span>
+      <input class="input" type="password" value="{{ apiKey }}" onChange="{{ onApiKey }}" placeholder="(none)" autocomplete="off" style="min-height:32px;padding:4px 8px;font-size:13px">
+    </label>
+  </div>
+</aside>
+
+<main style="flex:1;min-width:0;display:flex;flex-direction:column">
+  <sc-if value="{{ showTopbar }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:none;display:flex;align-items:center;gap:12px;padding:0 32px;height:72px;border-bottom:2px solid var(--color-divider)">
+      <div style="display:flex;flex-direction:column;min-width:0">
+        <span style="font-size:22px;font-weight:800;line-height:1.1;letter-spacing:-.015em">{{ title }}</span>
+        <span style="font-size:13px;color:var(--color-neutral-700);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ sub }}</span>
+      </div>
+      <span style="flex:1"></span>
+      <span style="display:inline-flex;border:1px solid var(--color-divider);font-size:12px;font-weight:600;white-space:nowrap"><span style="background:var(--color-accent);color:var(--dx-on-accent);padding:4px 8px;font-weight:800">{{ method }}</span><span style="padding:4px 10px">{{ route }}</span></span>
+      <sc-if value="{{ isLedger }}"><span class="tag tag-neutral" title="{{ modeTitle }}" style="gap:7px;font-weight:600;letter-spacing:.06em;white-space:nowrap"><span style="width:7px;height:7px;background:{{ modeDot }}"></span>{{ modeLabel }}</span></sc-if>
+      <sc-if value="{{ isChat }}"><button type="button" class="btn btn-secondary" onClick="{{ onToggleSys }}" style="white-space:nowrap">{{ sysLabel }}</button></sc-if>
+      <sc-if value="{{ notMetrics }}"><button type="button" class="btn btn-secondary" onClick="{{ onNew }}" style="white-space:nowrap">{{ newLabel }}</button></sc-if>
+      <sc-if value="{{ isLedger }}"><button type="button" class="btn btn-secondary btn-icon" onClick="{{ onTheme }}" aria-label="Toggle theme">
+        <sc-if value="{{ isLight }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg></sc-if>
+        <sc-if value="{{ isDark }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg></sc-if>
+      </button></sc-if>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isMetrics }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1;min-height:0;overflow-y:auto;padding:28px 32px 40px">
+      <div style="max-width:1080px;display:flex;flex-direction:column;gap:24px">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <span style="font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase">Window</span>
+          <div style="display:inline-flex;border:1px solid var(--color-divider)">
+            <sc-for list="{{ windows }}" as="w" hint-placeholder-count="4">
+              <button type="button" onClick="{{ w.onClick }}" style="border:0;border-right:1px solid var(--color-divider);background:{{ w.bg }};color:{{ w.fg }};font:inherit;font-size:13px;font-weight:600;padding:7px 14px;cursor:pointer">{{ w.label }}</button>
+            </sc-for>
+          </div>
+          <button type="button" class="btn btn-secondary" onClick="{{ onRefreshMetrics }}" style="font-size:13px">Refresh</button>
+          <span style="font-size:12px;color:var(--color-neutral-700)">{{ mStatus }}</span>
+        </div>
+
+        <sc-if value="{{ metricsEmpty }}" hint-placeholder-val="{{ false }}">
+          <div style="border:2px solid var(--color-divider);padding:40px 32px;display:flex;flex-direction:column;gap:6px">
+            <span style="font-size:22px;font-weight:800">No requests recorded in this window.</span>
+            <span style="color:var(--color-neutral-700)">Send a chat message or ask a docs question, then refresh.</span>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ hasMetrics }}" hint-placeholder-val="{{ true }}">
+          <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2px;background:var(--color-divider);border:2px solid var(--color-divider)">
+            <div style="grid-column:span 2;grid-row:span 2;background:var(--color-accent);color:var(--dx-on-accent);padding:24px;display:flex;flex-direction:column;justify-content:space-between;gap:24px;min-height:248px">
+              <span style="font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase">{{ heroLabel }}</span>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <span style="font-size:92px;font-weight:800;line-height:.9;letter-spacing:-.045em">{{ heroValue }}</span>
+                <span style="font-size:14px;font-weight:600">{{ heroSub }}</span>
+              </div>
+            </div>
+            <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+              <div style="background:var(--color-bg);padding:18px 20px;display:flex;flex-direction:column;gap:6px;min-width:0">
+                <span style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">{{ k.label }}</span>
+                <span style="font-size:34px;font-weight:800;line-height:1.05;letter-spacing:-.02em;font-variant-numeric:tabular-nums">{{ k.value }}</span>
+                <span style="font-size:12px;color:var(--color-neutral-700)">{{ k.sub }}</span>
+              </div>
+            </sc-for>
+            <div style="grid-column:span 4;background:var(--color-bg);padding:18px 20px;display:flex;flex-direction:column;gap:10px">
+              <span style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">Cache hit rate</span>
+              <div style="height:10px;background:var(--color-accent-200)"><div style="height:100%;width:{{ hitPct }}%;background:var(--color-accent)"></div></div>
+              <span style="font-size:13px;color:var(--color-neutral-700)">{{ meterCap }}</span>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span style="font-size:13px;font-weight:800;letter-spacing:.1em;text-transform:uppercase">By model</span>
+            <div style="overflow-x:auto">
+              <table class="table" style="font-size:13px">
+                <thead><tr><th>Provider</th><th>Model</th><th style="text-align:right">Requests</th><th style="text-align:right">Hits</th><th style="text-align:right">Cost</th><th style="text-align:right">p95</th></tr></thead>
+                <tbody>
+                  <sc-for list="{{ byModel }}" as="r" hint-placeholder-count="3">
+                    <tr><td>{{ r.provider }}</td><td style="font-weight:600">{{ r.model }}</td><td style="text-align:right;font-variant-numeric:tabular-nums">{{ r.requests }}</td><td style="text-align:right;font-variant-numeric:tabular-nums">{{ r.hits }}</td><td style="text-align:right;font-variant-numeric:tabular-nums">{{ r.cost }}</td><td style="text-align:right;font-variant-numeric:tabular-nums">{{ r.p95 }}</td></tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span style="font-size:13px;font-weight:800;letter-spacing:.1em;text-transform:uppercase">Recent requests</span>
+            <div style="overflow-x:auto">
+              <table class="table" style="font-size:13px">
+                <thead><tr><th>Time</th><th>Endpoint</th><th>Model</th><th></th><th style="text-align:right">In</th><th style="text-align:right">Out</th><th style="text-align:right">Latency</th><th style="text-align:right">Cost</th></tr></thead>
+                <tbody>
+                  <sc-for list="{{ recent }}" as="r" hint-placeholder-count="6">
+                    <tr><td style="font-variant-numeric:tabular-nums;white-space:nowrap">{{ r.time }}</td><td style="white-space:nowrap">{{ r.endpoint }}</td><td style="white-space:nowrap">{{ r.model }}</td><td><sc-if value="{{ r.hit }}"><span class="tag" style="background:var(--color-accent);color:var(--dx-on-accent);font-weight:800;padding:1px 6px;font-size:10px;letter-spacing:.06em">HIT</span></sc-if></td><td style="text-align:right;font-variant-numeric:tabular-nums">{{ r.input }}</td><td style="text-align:right;font-variant-numeric:tabular-nums">{{ r.output }}</td><td style="text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap">{{ r.latency }}</td><td style="text-align:right;font-variant-numeric:tabular-nums">{{ r.cost }}</td></tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ notMetrics }}" hint-placeholder-val="{{ true }}">
+    <div ref="{{ logRef }}" style="flex:1;min-height:0;overflow-y:auto;padding:32px 32px 16px">
+      <div style="max-width:800px;display:flex;flex-direction:column;gap:30px">
+        <sc-if value="{{ threadEmpty }}" hint-placeholder-val="{{ false }}">
+          <div style="padding-top:6vh;max-width:540px;display:flex;flex-direction:column;gap:12px">
+            <span style="font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--color-accent-700)">{{ emptyKicker }}</span>
+            <span style="font-size:36px;font-weight:800;line-height:1.05;letter-spacing:-.02em">Send a message to start</span>
+            <span style="color:var(--color-neutral-700);text-wrap:pretty">{{ emptyBody }}</span>
+            <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--color-neutral-700);margin-top:6px"><kbd style="border:1px solid var(--color-divider);border-bottom-width:2px;padding:2px 6px;font:inherit;font-weight:600">Enter</kbd>send<span style="width:12px"></span><kbd style="border:1px solid var(--color-divider);border-bottom-width:2px;padding:2px 6px;font:inherit;font-weight:600">Shift</kbd>+<kbd style="border:1px solid var(--color-divider);border-bottom-width:2px;padding:2px 6px;font:inherit;font-weight:600">Enter</kbd>newline</span>
+          </div>
+        </sc-if>
+        <sc-for list="{{ msgs }}" as="m" hint-placeholder-count="0">
+          <div onClick="{{ m.onSelect }}" style="display:flex;flex-direction:column;gap:10px;cursor:{{ m.cursor }}">
+            <div style="display:flex;align-items:center;gap:8px;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--color-neutral-700)">
+              <span style="width:7px;height:7px;background:{{ m.dot }}"></span>{{ m.who }}
+              <sc-if value="{{ m.inspecting }}"><span class="tag tag-accent" style="font-size:10px;padding:1px 6px;letter-spacing:.06em">Inspecting</span></sc-if>
+            </div>
+            <sc-if value="{{ m.isUser }}"><div style="background:var(--color-surface);padding:12px 16px;white-space:pre-wrap;word-wrap:break-word;font-size:15px">{{ m.text }}</div></sc-if>
+            <sc-if value="{{ m.isError }}"><div style="border:2px solid var(--color-accent);padding:12px 16px;white-space:pre-wrap;color:var(--color-accent-700);font-size:14px">{{ m.text }}</div></sc-if>
+            <sc-if value="{{ m.isAnswer }}"><div style="font-size:15.5px;line-height:1.72;white-space:pre-wrap;word-wrap:break-word;text-wrap:pretty"><sc-for list="{{ m.parts }}" as="p" hint-placeholder-count="1"><sc-if value="{{ p.plain }}"><span>{{ p.text }}</span></sc-if><sc-if value="{{ p.cite }}"><span onClick="{{ p.onClick }}" title="Jump to source" style="display:inline-block;min-width:18px;text-align:center;background:var(--color-accent-100);color:var(--color-accent-800);font-size:11px;font-weight:800;line-height:1.6;padding:0 4px;margin:0 1px;vertical-align:1px;cursor:pointer" style-hover="background:var(--color-accent);color:var(--dx-on-accent)">{{ p.n }}</span></sc-if></sc-for>{{ m.cursorEl }}</div></sc-if>
+
+            <sc-if value="{{ m.showReceipt }}">
+              <div style="display:flex;flex-wrap:wrap;border:1px solid var(--color-divider)">
+                <sc-if value="{{ m.isHit }}"><span style="display:flex;align-items:center;background:var(--color-accent);color:var(--dx-on-accent);font-size:11px;font-weight:800;letter-spacing:.08em;padding:0 12px">CACHE HIT</span></sc-if>
+                <sc-for list="{{ m.cells }}" as="c" hint-placeholder-count="5">
+                  <div style="display:flex;flex-direction:column;padding:6px 12px;border-right:1px solid var(--color-divider)">
+                    <span style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">{{ c.k }}</span>
+                    <span style="font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;color:{{ c.color }}">{{ c.v }}</span>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ m.hasNote }}"><div style="flex-basis:100%;border-top:1px solid var(--color-divider);padding:6px 12px;font-size:12px;color:var(--color-neutral-700)">{{ m.note }}</div></sc-if>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ m.showInlineSources }}">
+              <button type="button" onClick="{{ m.onToggleSrc }}" class="btn btn-secondary" style="align-self:flex-start;font-size:12px;padding:6px 10px;gap:8px">{{ m.srcSummary }}<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate({{ m.chev }}deg)"><path d="m6 9 6 6 6-6"></path></svg></button>
+              <sc-if value="{{ m.srcOpen }}">
+                <div style="display:flex;flex-direction:column;border-top:2px solid var(--color-divider)">
+                  <sc-for list="{{ m.sources }}" as="s" hint-placeholder-count="3">
+                    <div id="{{ s.domId }}" style="display:flex;flex-direction:column;gap:6px;padding:12px;border-bottom:1px solid var(--color-divider);background:{{ s.bg }}">
+                      <div style="display:flex;align-items:center;gap:10px;font-size:12px">
+                        <span style="min-width:22px;height:22px;display:grid;place-items:center;background:var(--color-accent);color:var(--dx-on-accent);font-size:11px;font-weight:800">{{ s.n }}</span>
+                        <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600">{{ s.filename }}</span>
+                        <span style="color:var(--color-neutral-700);white-space:nowrap">chunk {{ s.chunk }}</span>
+                        <span style="width:56px;height:4px;flex:none;background:var(--color-accent-200)"><span style="display:block;height:100%;width:{{ s.pct }}%;background:var(--color-accent)"></span></span>
+                        <span style="font-weight:600;font-variant-numeric:tabular-nums">{{ s.sim }}</span>
+                      </div>
+                      <div style="font-size:13.5px;line-height:1.6;color:var(--color-neutral-800);white-space:pre-wrap">{{ s.excerpt }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </sc-if>
+
+            <sc-if value="{{ m.showInspectorLink }}"><span style="align-self:flex-start;font-size:12px;font-weight:600;color:var(--color-accent-700)">{{ m.inspectorLink }}</span></sc-if>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="flex:none;padding:14px 32px 22px;border-top:2px solid var(--color-divider)">
+      <div style="max-width:800px;display:flex;flex-direction:column;gap:8px">
+        <sc-if value="{{ showSysField }}"><textarea class="input" value="{{ sys }}" onChange="{{ onSys }}" placeholder="Optional system prompt — chat mode only (RAG supplies its own)" style="min-height:60px;font-size:13px"></textarea></sc-if>
+        <div style="border:2px solid {{ composerBorder }};background:var(--color-surface)">
+          <textarea value="{{ draft }}" onChange="{{ onDraft }}" onKeyDown="{{ onKey }}" onFocus="{{ onFocus }}" onBlur="{{ onBlur }}" disabled="{{ busy }}" placeholder="{{ placeholder }}" rows="2" style="display:block;width:100%;border:0;background:transparent;resize:none;padding:14px 16px 4px;font:inherit;font-size:15px;color:var(--color-text);outline:none;min-height:58px"></textarea>
+          <div style="display:flex;align-items:center;gap:16px;padding:8px 8px 8px 16px;flex-wrap:wrap">
+            <sc-if value="{{ isRag }}">
+              <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--color-neutral-700)">top_k<input class="input" type="number" min="1" max="20" value="{{ topK }}" onChange="{{ onTopK }}" style="width:62px;min-height:30px;padding:3px 6px;font-size:13px;background:var(--color-bg)"></label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--color-neutral-700)">min_sim<input class="input" type="number" min="0" max="1" step="0.05" value="{{ minSim }}" onChange="{{ onMinSim }}" style="width:70px;min-height:30px;padding:3px 6px;font-size:13px;background:var(--color-bg)"></label>
+              <label title="Retrieve chunks without generating an answer. Costs no generation quota." style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--color-neutral-700);cursor:pointer"><input type="checkbox" checked="{{ retrieveOnly }}" onChange="{{ onRetrieveOnly }}" style="accent-color:var(--color-accent);width:15px;height:15px;margin:0">retrieve only</label>
+            </sc-if>
+            <sc-if value="{{ isChat }}"><span style="font-size:12px;color:var(--color-neutral-700)">{{ historyNote }}</span></sc-if>
+            <div style="margin-left:auto;display:flex;gap:8px">
+              <button type="button" class="btn btn-secondary" disabled="{{ stopDisabled }}" onClick="{{ onStop }}">Stop</button>
+              <button type="button" class="btn btn-primary" disabled="{{ sendDisabled }}" onClick="{{ onSend }}" style="min-width:128px;justify-content:space-between">{{ sendLabel }}<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</main>
+
+<sc-if value="{{ showInspector }}" hint-placeholder-val="{{ false }}">
+  <aside ref="{{ inspRef }}" style="width:320px;flex:none;min-height:0;overflow-y:auto;border-left:2px solid var(--color-divider);display:flex;flex-direction:column">
+    <div style="padding:16px 20px;border-bottom:2px solid var(--color-divider);display:flex;flex-direction:column;gap:2px">
+      <span style="font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase">Inspector</span>
+      <span style="font-size:13px;color:var(--color-neutral-700)">{{ inspSub }}</span>
+    </div>
+    <sc-if value="{{ inspEmpty }}"><div style="padding:20px;font-size:13px;color:var(--color-neutral-700)">Click an answer in the thread to see its receipt and sources here.</div></sc-if>
+    <sc-if value="{{ inspHas }}">
+      <sc-if value="{{ inspHit }}"><div style="background:var(--color-accent);color:var(--dx-on-accent);padding:14px 20px;display:flex;flex-direction:column;gap:2px"><span style="font-size:11px;font-weight:800;letter-spacing:.1em">CACHE HIT</span><span style="font-size:13px;font-weight:600">{{ inspNote }}</span></div></sc-if>
+      <div style="padding:6px 20px 0">
+        <sc-for list="{{ inspCells }}" as="c" hint-placeholder-count="6">
+          <div style="display:flex;align-items:baseline;gap:12px;padding:8px 0;border-bottom:1px solid var(--color-divider);font-size:13px">
+            <span style="flex:1;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">{{ c.k }}</span>
+            <span style="font-weight:600;font-variant-numeric:tabular-nums;color:{{ c.color }};text-align:right">{{ c.v }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <sc-if value="{{ inspHasSources }}">
+        <div style="padding:20px 20px 8px;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase">{{ inspSrcTitle }}</div>
+        <div style="display:flex;flex-direction:column;border-top:2px solid var(--color-divider);margin:0 20px 20px">
+          <sc-for list="{{ inspSources }}" as="s" hint-placeholder-count="3">
+            <div id="{{ s.domId }}" style="display:flex;flex-direction:column;gap:6px;padding:12px 8px;border-bottom:1px solid var(--color-divider);background:{{ s.bg }}">
+              <div style="display:flex;align-items:center;gap:8px;font-size:12px">
+                <span style="min-width:22px;height:22px;display:grid;place-items:center;background:var(--color-accent);color:var(--dx-on-accent);font-size:11px;font-weight:800">{{ s.n }}</span>
+                <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600">{{ s.filename }}</span>
+                <span style="font-weight:600;font-variant-numeric:tabular-nums">{{ s.sim }}</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--color-neutral-700)"><span style="flex:1;height:4px;background:var(--color-accent-200)"><span style="display:block;height:100%;width:{{ s.pct }}%;background:var(--color-accent)"></span></span>chunk {{ s.chunk }}</div>
+              <div style="font-size:13px;line-height:1.55;color:var(--color-neutral-800)">{{ s.excerpt }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+    </sc-if>
+  </aside>
+</sc-if>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;1280px&quot;,&quot;height&quot;:&quot;800px&quot;},&quot;layout&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;ledger&quot;,&quot;poster&quot;,&quot;grid&quot;],&quot;default&quot;:&quot;ledger&quot;,&quot;tsType&quot;:&quot;'ledger'|'poster'|'grid'&quot;},&quot;initialView&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;chat&quot;,&quot;rag&quot;,&quot;metrics&quot;],&quot;default&quot;:&quot;chat&quot;,&quot;tsType&quot;:&quot;'chat'|'rag'|'metrics'&quot;},&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'light'|'dark'&quot;},&quot;seed&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const p = props || {};
+    this.state = {
+      view: p.initialView || 'chat', theme: p.theme || 'light', mode: 'checking',
+      chat: [], rag: [], draft: '', sys: '', showSys: false, focus: false,
+      topK: 5, minSim: 0.5, retrieveOnly: false, provider: '', model: '', apiKey: '',
+      docs: [], docMsg: '', docBad: false, paste: '', dragOver: false, pendingDel: null,
+      mWindow: '24', metrics: null, recent: [], mStatus: '', busy: false,
+      selected: { chat: null, rag: null }, openSrc: {}, hiSrc: null,
+    };
+    this.seq = 0;
+    this.uid = Math.random().toString(36).slice(2, 7);
+    this.logRef = React.createRef(); this.fileRef = React.createRef(); this.inspRef = React.createRef();
+    this.ctx = { cache: {} };
+    this.controller = null;
+  }
+
+  componentDidMount() { this.boot(); }
+  componentWillUnmount() { this.dead = true; if (this.controller) this.controller.abort(); }
+  componentDidUpdate(pp) {
+    if (pp.theme !== this.props.theme && this.props.theme) this.setState({ theme: this.props.theme });
+    if (pp.initialView !== this.props.initialView && this.props.initialView) this.setView(this.props.initialView);
+  }
+
+  get api() { return window.DocxpoAPI; }
+
+  async boot() {
+    for (let i = 0; i < 60 && !window.DocxpoAPI; i++) await new Promise((r) => setTimeout(r, 50));
+    const api = this.api; if (!api) return;
+    const live = await api.probe();
+    if (this.dead) return;
+    if (live) {
+      this.setState({ mode: 'live' });
+      this.loadDocs();
+    } else {
+      const sd = this.props.seed === false ? null : api.seed(() => ++this.seq);
+      if (sd) Object.assign(this.ctx.cache, sd.cache);
+      this.setState({
+        mode: 'mock', docs: api.mockDocs(),
+        chat: sd ? sd.chat : [], rag: sd ? sd.rag : [],
+        selected: { chat: sd ? sd.chatSel : null, rag: sd ? sd.ragSel : null },
+      });
+    }
+    this.loadMetrics();
+  }
+
+  headers(base = {}) { const k = this.state.apiKey.trim(); return k ? { ...base, 'X-API-Key': k } : base; }
+  isLive() { return this.state.mode === 'live'; }
+
+  docMsg(text, bad = false) {
+    this.setState({ docMsg: text, docBad: bad });
+    clearTimeout(this.docT);
+    if (text) this.docT = setTimeout(() => { if (!this.dead && this.state.docMsg === text) this.setState({ docMsg: '' }); }, 4000);
+  }
+
+  async loadDocs() {
+    if (!this.isLive()) return;
+    try {
+      const res = await fetch('/v1/documents?limit=100', { headers: this.headers() });
+      if (!res.ok) return this.docMsg(this.api.limitMessage(res, await this.api.errorDetail(res)), true);
+      const data = await res.json();
+      this.setState({ docs: data.documents });
+    } catch (e) { this.docMsg('could not load documents: ' + e.message, true); }
+  }
+
+  async ingest(fn, mockDoc) {
+    this.docMsg('indexing… (embedding takes a few seconds)');
+    if (!this.isLive()) {
+      await this.api.sleep(700);
+      const doc = { id: 'm' + (++this.seq), ...mockDoc, created_at: new Date().toISOString() };
+      this.setState((s) => ({ docs: [doc, ...s.docs] }));
+      this.docMsg(`indexed ${doc.filename} — ${doc.chunk_count} chunks`);
+      return true;
+    }
+    try {
+      const res = await fn();
+      if (!res.ok) { this.docMsg(this.api.limitMessage(res, await this.api.errorDetail(res)), true); return false; }
+      const doc = await res.json();
+      this.docMsg(`indexed ${doc.filename} — ${doc.chunk_count} chunks`);
+      this.loadDocs();
+      return true;
+    } catch (e) { this.docMsg(e.message, true); return false; }
+  }
+
+  uploadFile(f) {
+    if (!f) return this.docMsg('choose a file first', true);
+    const body = new FormData(); body.append('file', f);
+    this.ingest(() => fetch('/v1/documents', { method: 'POST', body, headers: this.headers() }),
+      { filename: f.name, content_type: f.type || 'text/plain', char_count: f.size, chunk_count: Math.max(1, Math.ceil(f.size / 1000)) });
+  }
+
+  async indexPaste() {
+    const content = this.state.paste.trim();
+    if (!content) return this.docMsg('paste some text first', true);
+    const ok = await this.ingest(() => fetch('/v1/documents/text', {
+      method: 'POST', headers: this.headers({ 'content-type': 'application/json' }),
+      body: JSON.stringify({ filename: 'pasted.txt', content }),
+    }), { filename: 'pasted.txt', content_type: 'text/plain', char_count: content.length, chunk_count: Math.max(1, Math.ceil(content.length / 1000)) });
+    if (ok) this.setState({ paste: '' });
+  }
+
+  async deleteDoc(d) {
+    if (this.state.pendingDel !== d.id) {
+      this.setState({ pendingDel: d.id });
+      clearTimeout(this.delT);
+      this.delT = setTimeout(() => !this.dead && this.setState({ pendingDel: null }), 3000);
+      return;
+    }
+    this.setState({ pendingDel: null });
+    if (!this.isLive()) { this.setState((s) => ({ docs: s.docs.filter((x) => x.id !== d.id) })); return this.docMsg('deleted'); }
+    const r = await fetch(`/v1/documents/${d.id}`, { method: 'DELETE', headers: this.headers() });
+    this.docMsg(r.ok ? 'deleted' : 'delete failed', !r.ok);
+    this.loadDocs();
+  }
+
+  async loadMetrics(hours = this.state.mWindow) {
+    const api = this.api; if (!api) return;
+    if (!this.isLive()) {
+      this.setState({ metrics: api.mockMetrics(hours), recent: api.mockRecent(), mStatus: '' });
+      return;
+    }
+    this.setState({ mStatus: 'loading…' });
+    try {
+      const [mRes, rRes] = await Promise.all([
+        fetch(`/v1/metrics?window_hours=${hours}`, { headers: this.headers() }),
+        fetch('/v1/metrics/recent?limit=15', { headers: this.headers() }),
+      ]);
+      if (!mRes.ok) return this.setState({ mStatus: api.limitMessage(mRes, await api.errorDetail(mRes)) });
+      const data = await mRes.json();
+      const recent = rRes.ok ? (await rRes.json()).requests : [];
+      this.setState({ metrics: data, recent, mStatus: '' });
+    } catch (e) { this.setState({ mStatus: e.message }); }
+  }
+
+  setView(v) {
+    this.setState({ view: v });
+    if (v === 'metrics') this.loadMetrics();
+    if (v === 'rag') this.loadDocs();
+  }
+
+  kind() { return this.state.view === 'rag' ? 'rag' : 'chat'; }
+  push(kind, msg) { this.setState((s) => ({ [kind]: [...s[kind], msg] })); }
+  patch(kind, id, fn) { this.setState((s) => ({ [kind]: s[kind].map((m) => (m.id === id ? { ...m, ...fn(m) } : m)) })); }
+  select(kind, id) { this.setState((s) => ({ selected: { ...s.selected, [kind]: id } })); }
+  scrollBottom() { requestAnimationFrame(() => { const el = this.logRef.current; if (el) el.scrollTop = el.scrollHeight; }); }
+
+  newChat() {
+    if (this.controller) this.controller.abort();
+    const k = this.kind();
+    this.setState((s) => ({ [k]: [], selected: { ...s.selected, [k]: null } }));
+  }
+
+  async send() {
+    const s = this.state, api = this.api;
+    const text = s.draft.trim();
+    if (!text || this.controller || !api) return;
+    const kind = this.kind();
+    this.push(kind, { id: ++this.seq, role: 'user', text });
+    this.setState({ draft: '' });
+    this.scrollBottom();
+    if (kind === 'rag' && s.retrieveOnly) return this.retrieve(text);
+
+    const id = ++this.seq;
+    this.push(kind, { id, role: 'assistant', text: '', streaming: true, sources: [], receipt: null });
+    this.select(kind, id);
+
+    let url, payload;
+    if (kind === 'rag') {
+      url = '/v1/rag/query';
+      payload = { question: text, top_k: Number(s.topK) || 5, min_similarity: Number(s.minSim) };
+    } else {
+      const history = s.chat.filter((m) => (m.role === 'user' || m.role === 'assistant') && m.text).map((m) => ({ role: m.role, content: m.text }));
+      history.push({ role: 'user', content: text });
+      const messages = [];
+      if (s.sys.trim()) messages.push({ role: 'system', content: s.sys.trim() });
+      messages.push(...history);
+      url = '/v1/chat'; payload = { messages };
+    }
+    if (s.provider) payload.provider = s.provider;
+    if (s.model.trim()) payload.model = s.model.trim();
+
+    this.controller = new AbortController();
+    this.setState({ busy: true });
+    const t0 = performance.now();
+    let ttft = null, answer = '';
+    const onEvent = (event, msg) => {
+      if (this.dead) return;
+      if (event === 'sources') this.patch(kind, id, () => ({ sources: msg.sources }));
+      else if (event === 'token') {
+        if (ttft === null) ttft = performance.now() - t0;
+        answer += msg.text;
+        this.patch(kind, id, () => ({ text: answer }));
+        this.scrollBottom();
+      } else if (event === 'done') {
+        const u = msg.usage || {};
+        const receipt = msg.cached
+          ? { cached: true, similarity: msg.cache_similarity, latency: msg.latency_ms, saved: msg.tokens_saved, age: msg.cache_age_seconds, model: msg.model, cachedQuestion: msg.cached_question }
+          : { cached: false, provider: msg.provider, model: msg.model, input: u.input_tokens, output: u.output_tokens, ttft, total: msg.latency_ms, finish: msg.finish_reason };
+        this.patch(kind, id, () => ({ receipt, streaming: false }));
+        this.scrollBottom();
+      } else if (event === 'error') {
+        throw new Error(msg.error || 'stream error');
+      }
+    };
+    try {
+      if (this.isLive()) await api.streamSSE(url, payload, this.headers(), this.controller.signal, onEvent);
+      else await api.mockStream(kind, payload, this.controller.signal, onEvent, this.ctx);
+    } catch (err) {
+      if (err.name === 'AbortError') this.patch(kind, id, (m) => ({ text: (m.text || '') + '\n\n[stopped]', streaming: false }));
+      else this.patch(kind, id, (m) => ({ role: 'error', text: m.text ? m.text + '\n\n' + err.message : err.message, streaming: false }));
+    } finally {
+      this.controller = null;
+      if (!this.dead) { this.setState({ busy: false }); this.patch(kind, id, () => ({ streaming: false })); }
+    }
+  }
+
+  async retrieve(question) {
+    const s = this.state, api = this.api;
+    const id = ++this.seq;
+    const k = Number(s.topK) || 5, min = Number(s.minSim);
+    this.setState({ busy: true });
+    try {
+      let data;
+      if (this.isLive()) {
+        const res = await fetch('/v1/rag/retrieve', { method: 'POST', headers: this.headers({ 'content-type': 'application/json' }), body: JSON.stringify({ question, top_k: k, min_similarity: min }) });
+        if (!res.ok) throw new Error(api.limitMessage(res, await api.errorDetail(res)));
+        data = await res.json();
+      } else { await api.sleep(240); data = api.mockRetrieve(question, k, min); }
+      const n = data.sources.length;
+      this.push('rag', { id, role: 'retrieval', text: n ? `${n} chunk${n === 1 ? '' : 's'} cleared min_sim ${min}. No answer generated.` : `Nothing cleared min_sim ${min}.`, sources: data.sources, receipt: null });
+      this.setState((st) => ({ openSrc: { ...st.openSrc, [id]: true } }));
+      this.select('rag', id);
+    } catch (e) {
+      this.push('rag', { id, role: 'error', text: e.message });
+    } finally { this.setState({ busy: false }); this.scrollBottom(); }
+  }
+
+  citeClick(kind, msgId, n, e) {
+    if (e) e.stopPropagation();
+    const key = `${msgId}-${n}`;
+    this.setState((s) => ({ selected: { ...s.selected, [kind]: msgId }, openSrc: { ...s.openSrc, [msgId]: true }, hiSrc: key }));
+    setTimeout(() => {
+      const el = document.getElementById(`dx-${this.uid}-src-${key}`);
+      const c = (this.props.layout === 'grid' ? this.inspRef : this.logRef).current;
+      if (el && c) c.scrollTop += el.getBoundingClientRect().top - c.getBoundingClientRect().top - c.clientHeight / 3;
+    }, 60);
+    clearTimeout(this.hiT);
+    this.hiT = setTimeout(() => !this.dead && this.setState({ hiSrc: null }), 1600);
+  }
+
+  cells(r) {
+    const api = this.api; const ms = api ? api.ms : (v) => v + 'ms';
+    if (!r) return [];
+    const ink = 'var(--color-text)', warn = 'var(--color-accent-700)';
+    if (r.cached) return [
+      { k: 'similarity', v: Number(r.similarity).toFixed(4), color: ink },
+      { k: 'latency', v: Number(r.latency).toFixed(1) + 'ms', color: ink },
+      { k: 'saved', v: (r.saved ?? 0) + ' tok', color: ink },
+      { k: 'age', v: Math.round(r.age || 0) + 's', color: ink },
+      { k: 'model', v: r.model, color: ink },
+    ];
+    const out = [
+      { k: 'provider', v: r.provider, color: ink },
+      { k: 'model', v: r.model, color: ink },
+      { k: 'in', v: String(r.input ?? '—'), color: ink },
+      { k: 'out', v: String(r.output ?? '—'), color: ink },
+      { k: 'ttft', v: r.ttft == null ? '—' : ms(r.ttft), color: ink },
+      { k: 'total', v: ms(r.total), color: ink },
+    ];
+    if (r.finish === 'max_tokens') out.push({ k: 'finish', v: 'truncated (max_tokens)', color: warn });
+    if (r.finish === 'no_context') out.push({ k: 'finish', v: 'nothing cleared min_sim', color: warn });
+    return out;
+  }
+
+  srcVm(m) {
+    return (m.sources || []).map((x) => {
+      const key = `${m.id}-${x.n}`;
+      return {
+        n: x.n, filename: x.filename, chunk: x.chunk_index, excerpt: x.excerpt,
+        sim: Number(x.similarity).toFixed(4), pct: Math.round(Math.max(0, Math.min(1, x.similarity)) * 100),
+        domId: `dx-${this.uid}-src-${key}`, bg: this.state.hiSrc === key ? 'var(--color-accent-100)' : 'transparent',
+      };
+    });
+  }
+
+  msgVm(m, kind, sel, isGrid) {
+    const isAnswer = m.role === 'assistant' || m.role === 'retrieval';
+    const srcs = m.sources || [];
+    let parts = [{ plain: true, cite: false, text: m.text }];
+    if (isAnswer && !m.streaming && srcs.length) {
+      parts = m.text.split(/(\[\d+\])/).filter(Boolean).map((t) => {
+        const mm = /^\[(\d+)\]$/.exec(t);
+        if (mm && Number(mm[1]) <= srcs.length) return { cite: true, plain: false, n: mm[1], onClick: (e) => this.citeClick(kind, m.id, mm[1], e) };
+        return { plain: true, cite: false, text: t };
+      });
+    }
+    const r = m.receipt;
+    const open = this.state.openSrc[m.id] ?? false;
+    const selected = sel === m.id;
+    const best = srcs.length ? ` · best ${Number(srcs[0].similarity).toFixed(3)}` : '';
+    const who = { user: 'You', assistant: 'Assistant', retrieval: 'Retrieval', error: 'Error' }[m.role];
+    return {
+      id: m.id, who, text: m.text, parts,
+      isUser: m.role === 'user', isError: m.role === 'error', isAnswer,
+      dot: m.role === 'user' ? 'var(--color-neutral-500)' : m.role === 'error' ? 'var(--color-accent-700)' : 'var(--color-accent)',
+      cursorEl: m.streaming ? React.createElement('span', { style: { animation: 'dxblink 1.05s steps(2) infinite', color: 'var(--color-accent)', marginLeft: 2 } }, '\u258D') : null,
+      showReceipt: !!r && !isGrid, isHit: !!(r && r.cached), cells: this.cells(r),
+      hasNote: !!(r && r.cached && r.cachedQuestion && r.similarity < 1), note: r && r.cachedQuestion ? `matched earlier question: “${r.cachedQuestion}”` : '',
+      showInlineSources: !isGrid && srcs.length > 0, srcOpen: open, chev: open ? 180 : 0,
+      srcSummary: `${srcs.length} source${srcs.length === 1 ? '' : 's'}${best}`,
+      sources: this.srcVm(m),
+      onToggleSrc: () => this.setState((s) => ({ openSrc: { ...s.openSrc, [m.id]: !open } })),
+      showInspectorLink: isGrid && isAnswer && (srcs.length > 0 || !!r),
+      inspectorLink: selected ? `Receipt${srcs.length ? ` and ${srcs.length} sources` : ''} in inspector →` : `Inspect receipt${srcs.length ? ` and ${srcs.length} sources` : ''}`,
+      inspecting: isGrid && selected && isAnswer,
+      onSelect: isGrid && isAnswer ? () => this.select(kind, m.id) : undefined,
+      cursor: isGrid && isAnswer ? 'pointer' : 'default',
+    };
+  }
+
+  renderVals() {
+    const s = this.state, api = this.api;
+    const money = api ? api.money : (v) => '$' + v, compact = api ? api.compact : String, ms = api ? api.ms : (v) => v + 'ms';
+    const layout = this.props.layout ?? 'ledger';
+    const isLedger = layout === 'ledger', isPoster = layout === 'poster', isGrid = layout === 'grid';
+    const view = s.view, isChat = view === 'chat', isRag = view === 'rag', isMetrics = view === 'metrics';
+    const V = {
+      chat: { title: 'Chat', sub: 'Straight to the model, no retrieval', route: '/v1/chat', method: 'POST' },
+      rag: { title: 'Ask docs', sub: 'Answers grounded in your indexed corpus', route: '/v1/rag/query', method: 'POST' },
+      metrics: { title: 'Metrics', sub: 'Spend, latency and cache across requests', route: '/v1/metrics', method: 'GET' },
+    };
+    const v = V[view];
+    const kind = isRag ? 'rag' : 'chat';
+    const thread = s[kind];
+    const sel = s.selected[kind];
+    const msgs = thread.map((m) => this.msgVm(m, kind, sel, isGrid));
+
+    const M = s.metrics, sm = M && M.summary;
+    const winLabel = { 1: 'last hour', 24: 'last 24 hours', 168: 'last 7 days', 0: 'all time' }[Number(s.mWindow)];
+    const hitPct = sm ? Math.min(100, sm.cache_hit_rate * 100) : 0;
+    const turns = s.chat.filter((m) => m.role === 'user' || m.role === 'assistant').length;
+
+    const navStat = {
+      chat: `POST /v1/chat · ${turns} message${turns === 1 ? '' : 's'}`,
+      rag: `POST /v1/rag/query · ${s.docs.length} doc${s.docs.length === 1 ? '' : 's'}`,
+      metrics: sm ? `GET /v1/metrics · ${money(sm.cost_usd.spent)} ${winLabel}` : 'GET /v1/metrics',
+    };
+    const nav = ['chat', 'rag', 'metrics'].map((id) => {
+      const on = id === view;
+      return {
+        id, label: V[id].title, method: V[id].method, stat: navStat[id],
+        isChat: id === 'chat', isRag: id === 'rag', isMetrics: id === 'metrics',
+        bg: on ? 'var(--color-accent)' : 'transparent', fg: on ? 'var(--dx-on-accent)' : 'var(--color-text)',
+        tabBorder: on ? 'var(--dx-on-accent)' : 'transparent', tabWeight: on ? 800 : 600,
+        onClick: () => this.setView(id),
+      };
+    });
+
+    const selMsg = isGrid && !isMetrics ? thread.find((m) => m.id === sel && (m.role === 'assistant' || m.role === 'retrieval')) : null;
+    const selR = selMsg && selMsg.receipt;
+    const modeLabel = { live: 'LIVE API', mock: 'MOCK DATA', checking: 'CONNECTING' }[s.mode];
+
+    return {
+      theme: s.theme, isLight: s.theme !== 'dark', isDark: s.theme === 'dark',
+      onTheme: () => this.setState((st) => ({ theme: st.theme === 'dark' ? 'light' : 'dark' })),
+      isLedger, isPoster, isGrid, showTopbar: !isPoster, sideW: isPoster ? '300px' : '288px',
+      isChat, isRag, isMetrics, notMetrics: !isMetrics,
+      title: v.title, sub: v.sub, method: isRag && s.retrieveOnly ? 'POST' : v.method,
+      route: isRag && s.retrieveOnly ? '/v1/rag/retrieve' : v.route,
+      nav, modeLabel,
+      modeDot: s.mode === 'live' ? 'var(--color-accent)' : 'var(--color-neutral-500)',
+      modeTitle: s.mode === 'mock' ? 'No docXpo server answered at this origin — showing simulated data.' : s.mode === 'live' ? 'Connected to the docXpo API on this origin.' : 'Checking for a docXpo server…',
+      sysLabel: s.showSys ? 'Hide system prompt' : 'System prompt', onToggleSys: () => this.setState((st) => ({ showSys: !st.showSys })),
+      newLabel: isRag ? 'Clear thread' : 'New chat', onNew: () => this.newChat(),
+
+      docs: s.docs.map((d) => ({
+        name: d.filename, meta: `${d.chunk_count}c`,
+        title: `${d.filename} · ${d.chunk_count} chunk${d.chunk_count === 1 ? '' : 's'} · ${Number(d.char_count).toLocaleString()} chars`,
+        pending: s.pendingDel === d.id, idle: s.pendingDel !== d.id, onDelete: () => this.deleteDoc(d),
+      })),
+      noDocs: s.docs.length === 0 && s.mode !== 'checking', docCount: s.docs.length ? String(s.docs.length) : '',
+      docMsg: s.docMsg, docMsgColor: s.docBad ? 'var(--color-accent-700)' : 'var(--color-neutral-700)',
+      onRefreshDocs: () => (this.isLive() ? this.loadDocs() : this.docMsg('mock mode — list is local')),
+      fileRef: this.fileRef,
+      onPick: () => this.fileRef.current && this.fileRef.current.click(),
+      onPickKey: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.fileRef.current && this.fileRef.current.click(); } },
+      onFile: (e) => { const f = e.target.files[0]; if (f) { this.uploadFile(f); e.target.value = ''; } },
+      onDragOver: (e) => { e.preventDefault(); if (!s.dragOver) this.setState({ dragOver: true }); },
+      onDragLeave: () => this.setState({ dragOver: false }),
+      onDrop: (e) => { e.preventDefault(); this.setState({ dragOver: false }); this.uploadFile(e.dataTransfer.files[0]); },
+      dropBorder: s.dragOver ? 'var(--color-accent)' : 'var(--color-divider)', dropBg: s.dragOver ? 'var(--color-accent-100)' : 'transparent',
+      paste: s.paste, onPaste: (e) => this.setState({ paste: e.target.value }), onIndexPaste: () => this.indexPaste(),
+
+      provider: s.provider, onProvider: (e) => this.setState({ provider: e.target.value }),
+      model: s.model, onModel: (e) => this.setState({ model: e.target.value }),
+      modelPlaceholder: s.provider && api ? api.DEFAULT_MODELS[s.provider] : '(provider default)',
+      apiKey: s.apiKey, onApiKey: (e) => this.setState({ apiKey: e.target.value }),
+
+      logRef: this.logRef, inspRef: this.inspRef, msgs,
+      threadEmpty: thread.length === 0 && s.mode !== 'checking',
+      emptyKicker: isRag ? `POST /v1/rag/query · ${s.docs.length} documents indexed` : 'POST /v1/chat',
+      emptyBody: isRag ? 'Questions are embedded once, checked against the semantic cache, then answered from the top-k chunks of your corpus with [n] citations.' : 'Chat goes straight to the selected provider. Switch to Ask docs to answer from your indexed corpus instead.',
+
+      showSysField: isChat && s.showSys, sys: s.sys, onSys: (e) => this.setState({ sys: e.target.value }),
+      draft: s.draft, onDraft: (e) => this.setState({ draft: e.target.value }),
+      onKey: (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.send(); } },
+      onFocus: () => this.setState({ focus: true }), onBlur: () => this.setState({ focus: false }),
+      composerBorder: s.focus ? 'var(--color-accent)' : 'var(--color-divider)',
+      placeholder: isRag ? (s.retrieveOnly ? 'Retrieve chunks for…' : 'Ask about your documents…') : 'Ask something…',
+      busy: s.busy, sendDisabled: s.busy || !s.draft.trim(), stopDisabled: !s.busy,
+      sendLabel: isRag && s.retrieveOnly ? 'Retrieve' : 'Send',
+      onSend: () => this.send(), onStop: () => this.controller && this.controller.abort(),
+      topK: s.topK, onTopK: (e) => this.setState({ topK: e.target.value }),
+      minSim: s.minSim, onMinSim: (e) => this.setState({ minSim: e.target.value }),
+      retrieveOnly: s.retrieveOnly, onRetrieveOnly: (e) => this.setState({ retrieveOnly: e.target.checked }),
+      historyNote: turns ? `${turns} message${turns === 1 ? '' : 's'} in context${s.sys.trim() ? ' + system prompt' : ''}` : 'New conversation',
+
+      windows: [['1', '1h'], ['24', '24h'], ['168', '7d'], ['0', 'All time']].map(([id, label]) => ({
+        label, bg: s.mWindow === id ? 'var(--color-text)' : 'transparent', fg: s.mWindow === id ? 'var(--color-bg)' : 'var(--color-text)',
+        onClick: () => { this.setState({ mWindow: id }); this.loadMetrics(id); },
+      })),
+      onRefreshMetrics: () => this.loadMetrics(), mStatus: s.mStatus,
+      hasMetrics: !!(sm && sm.requests), metricsEmpty: !!(sm && !sm.requests),
+      heroLabel: `Spend · ${winLabel}`, heroValue: sm ? money(sm.cost_usd.spent) : '—',
+      heroSub: sm ? `${compact(sm.requests)} request${sm.requests === 1 ? '' : 's'} · ${compact(sm.tokens.total)} tokens${Number(sm.cost_usd.unpriced_requests) ? ` · ${sm.cost_usd.unpriced_requests} unpriced` : ''}` : '',
+      kpis: sm ? [
+        { label: 'Requests', value: compact(sm.requests), sub: `${sm.errors} error${sm.errors === 1 ? '' : 's'}` },
+        { label: 'Cache hit rate', value: hitPct.toFixed(1) + '%', sub: `${sm.cache_hits} of ${sm.requests}` },
+        { label: 'Saved by cache', value: money(sm.cost_usd.saved_by_cache), sub: 'avoided spend' },
+        { label: 'p95 latency', value: ms(sm.latency_ms.p95), sub: `p50 ${ms(sm.latency_ms.p50)}` },
+      ] : [],
+      hitPct: hitPct.toFixed(1),
+      meterCap: sm ? `${hitPct.toFixed(1)}% of requests answered from cache · p99 ${ms(sm.latency_ms.p99)}` : '',
+      byModel: M ? M.by_model.map((m) => ({ provider: m.provider, model: m.model, requests: m.requests, hits: m.cache_hits, cost: money(m.cost_usd), p95: ms(m.p95_latency_ms) })) : [],
+      recent: s.recent.map((r) => ({ time: new Date(r.created_at).toLocaleTimeString(), endpoint: r.endpoint, model: r.model, hit: !!r.cached, input: r.input_tokens, output: r.output_tokens, latency: ms(r.latency_ms), cost: money(r.cost_usd) })),
+
+      showInspector: isGrid && !isMetrics,
+      inspSub: selMsg ? `${selMsg.role === 'retrieval' ? 'Retrieval' : 'Answer'} · ${isRag ? 'POST /v1/rag/query' : 'POST /v1/chat'}` : 'Nothing selected',
+      inspEmpty: !selMsg, inspHas: !!selMsg, inspHit: !!(selR && selR.cached),
+      inspNote: selR && selR.cachedQuestion ? `Matched “${selR.cachedQuestion}”` : 'Answered from the semantic cache',
+      inspCells: this.cells(selR),
+      inspHasSources: !!(selMsg && selMsg.sources && selMsg.sources.length),
+      inspSrcTitle: selMsg && selMsg.sources ? `Sources · ${selMsg.sources.length}` : 'Sources',
+      inspSources: selMsg ? this.srcVm(selMsg) : [],
+    };
+  }
+}
+</script>
+</body>
+</html>
