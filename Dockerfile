@@ -45,7 +45,16 @@ COPY --chown=appuser:appuser alembic.ini ./
 USER appuser
 EXPOSE 8000
 
-# --no-access-log: our RequestContextMiddleware already emits one structured
-# line per request; uvicorn's default access log would duplicate it in a
-# different format.
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]
+# Used as-is by single-container hosts (Render, Railway, Fly). docker-compose
+# overrides it with its own command for local development.
+#
+# - Migrations run first: there is no separate release step on these hosts,
+#   and `alembic upgrade head` is a no-op when the schema is already current.
+#   Fine for one replica; with several, move it to a release/pre-deploy step so
+#   they don't race.
+# - $PORT: the host assigns the port; 8000 is the local fallback.
+# - --proxy-headers: the host's load balancer terminates TLS, so the real
+#   client address arrives in X-Forwarded-For.
+# - --no-access-log: RequestContextMiddleware already emits one structured line
+#   per request; uvicorn's default access log would duplicate it.
+CMD ["sh", "-c", "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips='*' --no-access-log"]

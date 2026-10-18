@@ -157,7 +157,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(health_router)
     app.include_router(api_router, prefix=settings.api_v1_prefix)
 
-    if settings.serve_ui and settings.environment != "prod":
+    if settings.ui_enabled:
         app.include_router(ui_router)
 
     return app

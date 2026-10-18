@@ -3,570 +3,515 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="dark light">
 <title>docXpo console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&display=swap">
 <style>
   /* -------------------------------------------------------------------------
-     Tokens.
+     Modernist console, "Ledger" layout.
 
-     Dark is the default because this console lives next to a terminal, not in
-     a browser tab full of marketing pages. Light is a full palette, not an
-     inversion -- a flipped dark theme reads muddy in daylight.
-
-     Two type roles, and the split carries meaning:
-       sans  speaks  -- prose, labels, answers
-       mono  measures -- endpoints, model ids, tokens, latency, similarity
-     No webfonts: the project ships without a CDN or a build step, so the
-     personality has to come from how the system stack is used, not from a
-     download.
+     Ported from the Claude Design file docxpo-frontend/DocxpoConsole.dc.html.
+     Flat and architectural: one typeface (Archivo), a single red accent, zero
+     corner radius, and strong 2px rules doing all the organising. Everything
+     is inline because app/api/ui.py serves this one file and nothing else.
      ------------------------------------------------------------------------- */
   :root {
-    --bg:#0A0B0D; --surface:#121317; --surface-2:#181A1F; --surface-3:#1E2026;
-    --line:#26282F; --line-2:#33363F;
-    --fg:#EAEAE8; --fg-2:#B9BBC2; --muted:#7C7F88;
-    --accent:#8B7BF7; --accent-ink:#FFFFFF; --accent-soft:#1C1930; --accent-track:#2C2750;
-    --ok:#3FBF8F; --ok-soft:#0F231D; --ok-ink:#04170C;
-    --warn:#E0A458; --err:#F0616B; --err-soft:#26151A;
-    --user:#191B21;
-    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
-    --r:8px; --r-lg:12px;
-    --side:264px;
+    --color-bg:#f3f2f2; --color-surface:#eae9e9; --color-text:#201e1d;
+    --color-accent:#ec3013;
+    --color-divider:color-mix(in srgb,#201e1d 40%,transparent);
+    --color-neutral-100:#f8f4f4; --color-neutral-200:#eae7e7; --color-neutral-300:#d7d3d3;
+    --color-neutral-400:#bab6b6; --color-neutral-500:#9b9797; --color-neutral-600:#7d7979;
+    --color-neutral-700:#605d5d; --color-neutral-800:#444141; --color-neutral-900:#2d2b2b;
+    --color-accent-100:#fff2ef; --color-accent-200:#ffe0d9; --color-accent-300:#ffc4b8;
+    --color-accent-400:#ff9783; --color-accent-500:#ff563c; --color-accent-600:#dd2b0f;
+    --color-accent-700:#ae1800; --color-accent-800:#7c1405; --color-accent-900:#4d170e;
+    /* The unfilled part of a meter is a lighter step of the same ramp, so the
+       state reads across the whole bar instead of stopping at the fill. */
+    --accent-track:var(--color-accent-200);
+    --on-accent:#f8f4f4;
+    --font:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
+    --side:288px;
   }
-  @media (prefers-color-scheme: light) {
-    :root {
-      --bg:#FAFAF9; --surface:#FFFFFF; --surface-2:#F4F4F2; --surface-3:#EDEDEA;
-      --line:#E4E4E0; --line-2:#D3D3CE;
-      --fg:#17181B; --fg-2:#4A4C52; --muted:#797B82;
-      --accent:#5B4BD6; --accent-ink:#FFFFFF; --accent-soft:#F0EEFD; --accent-track:#DCD7FA;
-      --ok:#12805C; --ok-soft:#E4F5EE; --ok-ink:#04170C;
-      --warn:#94600F; --err:#C8323C; --err-soft:#FCECEE;
-      --user:#F1F1EE;
-    }
+  :root[data-theme="dark"] {
+    color-scheme:dark;
+    --color-bg:#181615; --color-surface:#242120; --color-text:#f3f2f2;
+    --color-divider:color-mix(in srgb,#f3f2f2 30%,transparent);
+    --color-neutral-100:#2d2b2b; --color-neutral-200:#444141; --color-neutral-300:#605d5d;
+    --color-neutral-400:#7d7979; --color-neutral-500:#9b9797; --color-neutral-600:#bab6b6;
+    --color-neutral-700:#c9c5c5; --color-neutral-800:#eae7e7; --color-neutral-900:#f8f4f4;
+    --color-accent-100:#3a140d; --color-accent-200:#5e1708; --color-accent-300:#7c1405;
+    --color-accent-700:#ff9783; --color-accent-800:#ffc4b8; --color-accent-900:#ffe0d9;
   }
 
-  * { box-sizing:border-box; }
+  *, *::before, *::after { box-sizing:border-box; }
   html, body { height:100%; }
   body {
-    margin:0; background:var(--bg); color:var(--fg);
-    font:14px/1.6 var(--sans);
-    -webkit-font-smoothing:antialiased;
+    margin:0; background:var(--color-bg); color:var(--color-text);
+    font:400 15px/1.55 var(--font); -webkit-font-smoothing:antialiased;
   }
-  ::selection { background:var(--accent); color:var(--accent-ink); }
-  :focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }
-  ::-webkit-scrollbar { width:10px; height:10px; }
-  ::-webkit-scrollbar-thumb { background:var(--line-2); border-radius:99px; border:3px solid transparent; background-clip:content-box; }
-  ::-webkit-scrollbar-track { background:transparent; }
+  button, input, select, textarea { font:inherit; color:inherit; }
+  :focus { outline:none; }
+  :focus-visible { outline:2px solid var(--color-accent); outline-offset:2px; }
+  ::selection { background:color-mix(in srgb,var(--color-accent) 30%,transparent); }
+  svg { display:block; flex:none; }
+  [hidden] { display:none !important; }
+
+  /* ---- design-system pieces ---- */
+  .btn {
+    display:inline-flex; align-items:center; justify-content:flex-start; gap:6px;
+    cursor:pointer; font-weight:800; font-size:14px; line-height:1.2;
+    background:transparent; border:1px solid transparent; padding:8px 14px; white-space:nowrap;
+  }
+  .btn:disabled { opacity:.45; cursor:not-allowed; }
+  .btn-primary { background:var(--color-accent); color:var(--on-accent); }
+  .btn-primary:hover:not(:disabled) { background:var(--color-accent-600); }
+  .btn-primary:active:not(:disabled) { background:var(--color-accent-700); }
+  .btn-secondary { border-color:var(--color-divider); }
+  .btn-secondary:hover:not(:disabled) { background:color-mix(in srgb,var(--color-text) 7%,transparent); }
+  .btn-secondary:active:not(:disabled) { background:color-mix(in srgb,var(--color-text) 14%,transparent); }
+  .btn-icon { width:36px; height:36px; padding:0; justify-content:center; }
+  .input {
+    width:100%; min-height:36px; padding:6px 10px; font-size:14px;
+    background:var(--color-surface); border:1px solid var(--color-divider);
+    caret-color:var(--color-accent);
+  }
+  .input:hover { border-color:color-mix(in srgb,var(--color-text) 45%,transparent); }
+  .input:focus-visible { border-color:var(--color-accent); outline-offset:0; }
+  .input::placeholder, textarea::placeholder { color:var(--color-neutral-600); }
+  .tag { display:inline-flex; align-items:center; gap:7px; font-size:11px; font-weight:600; letter-spacing:.06em; padding:3px 10px; white-space:nowrap; }
+  .tag-neutral { background:var(--color-neutral-100); color:var(--color-neutral-800); }
+  .tag .sq { width:7px; height:7px; }
+  .cap { font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; }
+  .muted { color:var(--color-neutral-700); }
 
   /* ---- shell ---- */
-  .app { display:flex; height:100%; }
+  .app { display:flex; height:100%; overflow:hidden; }
   .side {
-    width:var(--side); flex:0 0 var(--side); display:flex; flex-direction:column;
-    background:var(--surface); border-right:1px solid var(--line); overflow:hidden;
+    width:var(--side); flex:none; display:flex; flex-direction:column; min-height:0;
+    border-right:2px solid var(--color-divider); background:var(--color-bg);
   }
   .main { flex:1; min-width:0; display:flex; flex-direction:column; }
 
-  /* ---- brand ---- */
-  .brand { display:flex; align-items:center; gap:9px; padding:14px 16px 12px; }
-  .mark {
-    width:24px; height:24px; border-radius:7px; background:var(--accent);
-    display:grid; place-items:center; color:var(--accent-ink); flex:none;
-  }
-  .brand b { font-size:14.5px; font-weight:600; letter-spacing:-.15px; }
-  .brand .ver { font:11px/1 var(--mono); color:var(--muted); margin-left:auto; }
+  .brand { display:flex; align-items:center; gap:10px; padding:0 20px; height:72px; flex:none; border-bottom:2px solid var(--color-divider); }
+  .mark { width:28px; height:28px; display:grid; place-items:center; background:var(--color-accent); color:var(--on-accent); }
+  .brand b { font-size:20px; font-weight:800; letter-spacing:-.02em; }
+  .brand .ver { margin-left:auto; font-size:12px; }
 
-  /* ---- nav ---- */
-  .nav { padding:2px 10px 12px; display:grid; gap:1px; }
+  .nav { display:flex; flex-direction:column; flex:none; border-bottom:2px solid var(--color-divider); }
   .nav button {
-    display:flex; align-items:center; gap:10px; width:100%; text-align:left;
-    padding:7px 9px; border:0; border-radius:var(--r); background:transparent;
-    color:var(--fg-2); font:inherit; font-size:13.5px; cursor:pointer;
+    display:flex; align-items:center; gap:12px; width:100%; text-align:left; cursor:pointer;
+    border:0; border-bottom:1px solid var(--color-divider); background:transparent;
+    font-size:15px; font-weight:600; padding:12px 20px;
   }
-  .nav button:hover { background:var(--surface-2); color:var(--fg); }
-  .nav button.on { background:var(--accent-soft); color:var(--accent); font-weight:500; }
-  .nav svg { flex:none; }
+  .nav button:last-child { border-bottom:0; }
+  .nav button:hover:not(.on) { background:color-mix(in srgb,var(--color-text) 6%,transparent); }
+  .nav button.on { background:var(--color-accent); color:var(--on-accent); font-weight:800; }
+  .nav .lbl { flex:1; }
+  .nav .meth { font-size:11px; font-weight:600; opacity:.8; }
 
-  /* ---- sidebar sections ---- */
-  .sec { border-top:1px solid var(--line); padding:12px 16px; }
-  .sec-h {
-    display:flex; align-items:center; gap:8px; margin-bottom:9px;
-    font-size:11px; font-weight:600; letter-spacing:.7px; text-transform:uppercase; color:var(--muted);
-  }
-  .sec-h .n { font-family:var(--mono); letter-spacing:0; font-weight:500; }
-  .sec-h .sp { flex:1; }
-  .icon-btn {
-    display:grid; place-items:center; width:22px; height:22px; padding:0;
-    border:0; border-radius:6px; background:transparent; color:var(--muted); cursor:pointer;
-  }
-  .icon-btn:hover { background:var(--surface-2); color:var(--fg); }
-
-  /* Documents pane fills the leftover sidebar height and scrolls on its own,
-     so a 60-document corpus never pushes the settings block off-screen. */
-  #docs { flex:1; min-height:0; display:flex; flex-direction:column; }
+  .corpus { flex:1; min-height:0; display:flex; flex-direction:column; gap:12px; padding:16px 20px; }
+  .corpus-h { display:flex; align-items:center; gap:8px; }
+  .corpus-h .n { font-size:12px; font-variant-numeric:tabular-nums; }
+  .corpus-h .sp { flex:1; }
+  .sq-btn { width:30px; height:30px; padding:0; justify-content:center; }
   .drop {
-    border:1px dashed var(--line-2); border-radius:var(--r); padding:13px 10px;
-    text-align:center; cursor:pointer; transition:border-color .12s, background .12s;
+    display:flex; flex-direction:column; align-items:flex-start; gap:4px; padding:14px;
+    border:2px dashed var(--color-divider); cursor:pointer; transition:border-color .12s, background .12s;
   }
-  .drop:hover, .drop.over { border-color:var(--accent); background:var(--accent-soft); }
-  .drop p { margin:5px 0 0; font-size:12.5px; color:var(--fg-2); }
-  .drop span { display:block; margin-top:2px; font:11px/1.4 var(--mono); color:var(--muted); }
-  .drop svg { color:var(--muted); }
-  .drop.over svg, .drop:hover svg { color:var(--accent); }
-  #file { display:none; }
+  .drop:hover, .drop.over { border-color:var(--color-accent); background:var(--color-accent-100); }
+  .drop svg { color:var(--color-accent); }
+  .drop .t { font-size:14px; font-weight:600; }
+  .drop .s { font-size:12px; }
+  .paste { display:flex; flex-direction:column; gap:6px; }
+  .paste textarea { min-height:56px; font-size:13px; resize:vertical; }
+  .paste .btn { font-size:13px; }
+  .doclist { flex:1; min-height:0; overflow-y:auto; border-top:2px solid var(--color-divider); }
+  .doc { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--color-divider); font-size:13px; }
+  .doc > svg { color:var(--color-neutral-600); }
+  .doc .nm { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; }
+  .doc .meta { flex:none; font-size:12px; font-variant-numeric:tabular-nums; }
+  .doc .del { width:26px; height:26px; padding:0; justify-content:center; color:var(--color-neutral-600); }
+  .doc .del:hover { color:var(--color-accent); }
+  .doc .confirm { padding:3px 8px; font-size:11px; }
+  .doclist .none { padding:12px 0; font-size:13px; }
+  .docmsg { min-height:18px; font-size:12px; color:var(--color-neutral-700); }
+  .docmsg.bad { color:var(--color-accent-700); }
 
-  .paste-row { display:grid; gap:6px; margin-top:9px; }
-  .doclist { margin-top:10px; flex:1; min-height:0; overflow-y:auto; display:grid; gap:2px; align-content:start; }
-  .doc {
-    display:flex; align-items:center; gap:8px; padding:6px 8px;
-    border-radius:6px; font-size:12.5px; color:var(--fg-2);
-  }
-  .doc:hover { background:var(--surface-2); }
-  .doc .nm { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--fg); }
-  .doc .meta { font:11px/1 var(--mono); color:var(--muted); flex:none; }
-  .doc .icon-btn { opacity:0; flex:none; }
-  .doc:hover .icon-btn, .doc .icon-btn:focus-visible { opacity:1; }
-  .doc .icon-btn:hover { color:var(--err); }
+  .settings { flex:none; display:flex; flex-direction:column; gap:8px; padding:14px 20px 18px; border-top:2px solid var(--color-divider); }
+  .settings label { display:flex; align-items:center; gap:10px; font-size:12px; color:var(--color-neutral-700); }
+  .settings label > span { width:58px; flex:none; }
+  .settings .input { min-height:32px; padding:4px 8px; font-size:13px; color:var(--color-text); }
 
-  /* ---- settings block ---- */
-  .settings { border-top:1px solid var(--line); padding:11px 16px 14px; display:grid; gap:8px; }
-  .field { display:flex; align-items:center; gap:8px; }
-  .field > label {
-    flex:0 0 62px; font:11.5px/1 var(--mono); color:var(--muted);
-  }
-  .field > select, .field > input { flex:1; min-width:0; }
-
-  /* ---- controls ---- */
-  select, textarea, input, button { font:inherit; color:var(--fg); }
-  select, textarea, input[type=text], input[type=password], input[type=number] {
-    background:var(--surface-2); border:1px solid var(--line);
-    border-radius:6px; padding:5px 8px; font-size:13px; width:100%;
-  }
-  select:hover, input:hover, textarea:hover { border-color:var(--line-2); }
-  select:focus, input:focus, textarea:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
-  input::placeholder, textarea::placeholder { color:var(--muted); }
-  input[type=number] { font-family:var(--mono); }
-
-  .btn {
-    display:inline-flex; align-items:center; gap:6px; cursor:pointer;
-    background:var(--surface-2); border:1px solid var(--line); color:var(--fg);
-    border-radius:6px; padding:5px 11px; font-size:13px;
-  }
-  .btn:hover:not(:disabled) { border-color:var(--line-2); background:var(--surface-3); }
-  .btn:active:not(:disabled) { transform:translateY(.5px); }
-  .btn:disabled { opacity:.45; cursor:not-allowed; }
-  .btn.primary { background:var(--accent); border-color:var(--accent); color:var(--accent-ink); font-weight:500; }
-  .btn.primary:hover:not(:disabled) { filter:brightness(1.08); }
-  .btn.sm { padding:3px 8px; font-size:12px; }
-
-  /* ---- topbar ---- */
-  .topbar {
-    display:flex; align-items:center; gap:12px; padding:12px 22px;
-    border-bottom:1px solid var(--line); background:var(--surface);
-  }
-  .topbar h1 { margin:0; font-size:15px; font-weight:600; letter-spacing:-.15px; }
-  .topbar .sub { font-size:12.5px; color:var(--muted); }
+  /* ---- top bar ---- */
+  .topbar { flex:none; display:flex; align-items:center; gap:12px; padding:0 32px; height:72px; border-bottom:2px solid var(--color-divider); }
+  .topbar .titles { display:flex; flex-direction:column; min-width:0; }
+  .topbar .title { font-size:22px; font-weight:800; line-height:1.1; letter-spacing:-.015em; }
+  .topbar .sub { font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .topbar .sp { flex:1; }
   #menu { display:none; }
-
-  /* The route pill. An LLM gateway's console should never leave you guessing
-     which endpoint the next Enter keypress will hit. */
-  .route {
-    display:inline-flex; align-items:center; gap:7px; padding:3px 9px 3px 3px;
-    border:1px solid var(--line); border-radius:99px; background:var(--surface-2);
-    font:11.5px/1.5 var(--mono); color:var(--fg-2); white-space:nowrap;
-  }
-  .route .m {
-    background:var(--accent); color:var(--accent-ink); border-radius:99px;
-    padding:2px 7px; font-size:10px; font-weight:600; letter-spacing:.3px;
-  }
+  .route { display:inline-flex; border:1px solid var(--color-divider); font-size:12px; font-weight:600; white-space:nowrap; }
+  .route .m { background:var(--color-accent); color:var(--on-accent); padding:4px 8px; font-weight:800; }
+  .route .p { padding:4px 10px; }
 
   /* ---- thread ---- */
-  #log { flex:1; overflow-y:auto; padding:26px 22px 8px; }
-  .wrap { max-width:780px; margin:0 auto; }
-  .msg { margin-bottom:26px; }
-  .who {
-    display:flex; align-items:center; gap:7px; margin-bottom:7px;
-    font:11px/1 var(--mono); letter-spacing:.4px; color:var(--muted);
-  }
-  .who::before {
-    content:''; width:5px; height:5px; border-radius:99px; background:var(--muted);
-  }
-  .msg.assistant .who::before { background:var(--accent); }
-  .msg.error .who::before { background:var(--err); }
-
-  /* User turns get a surface; assistant answers sit directly on the page.
-     Long RAG answers are documents, and documents read better unboxed. */
-  .bubble { white-space:pre-wrap; word-wrap:break-word; font-size:14.5px; line-height:1.68; }
-  .msg.user .bubble {
-    background:var(--user); border:1px solid var(--line);
-    border-radius:var(--r-lg); padding:11px 14px; color:var(--fg-2);
-  }
-  .msg.error .bubble {
-    background:var(--err-soft); border:1px solid var(--err);
-    border-radius:var(--r-lg); padding:11px 14px; color:var(--err);
-  }
-
-  /* ---- the receipt ----------------------------------------------------------
-     Every answer this gateway returns has a cost, a latency and a provider
-     behind it. That is the whole point of the product, so it gets a real
-     component instead of a grey sentence: a mono strip of label/value pairs.
-     A cache hit is a different strip, not a different colour of the same one. */
-  .stats {
-    display:flex; flex-wrap:wrap; align-items:center; gap:0 16px;
-    margin-top:12px; padding:8px 12px;
-    background:var(--surface); border:1px solid var(--line); border-radius:var(--r);
-    font:11.5px/1.7 var(--mono); color:var(--muted);
-  }
-  .stats .k { color:var(--muted); }
-  .stats b { color:var(--fg); font-weight:500; font-variant-numeric:tabular-nums; }
-  .stats.hit { background:var(--ok-soft); border-color:var(--ok); }
-  .stats .warnv { color:var(--warn); }
-  .stats .errv { color:var(--err); }
-  .stats .note { flex-basis:100%; color:var(--muted); font-size:11px; }
-  .hit-badge {
-    background:var(--ok); color:var(--ok-ink); border-radius:4px;
-    padding:1px 6px; font-size:10px; font-weight:700; letter-spacing:.5px;
-  }
-
-  /* ---- citations + sources ---- */
+  .pane { flex:1; min-height:0; display:flex; flex-direction:column; }
+  .log { flex:1; min-height:0; overflow-y:auto; padding:32px 32px 16px; }
+  .thread { max-width:800px; display:flex; flex-direction:column; gap:30px; }
+  .empty { padding-top:6vh; max-width:540px; display:flex; flex-direction:column; gap:12px; }
+  .empty .k { color:var(--color-accent-700); }
+  .empty .h { font-size:36px; font-weight:800; line-height:1.05; letter-spacing:-.02em; }
+  .empty .b { text-wrap:pretty; }
+  .empty .keys { display:flex; align-items:center; gap:6px; font-size:12px; margin-top:6px; }
+  kbd { border:1px solid var(--color-divider); border-bottom-width:2px; padding:2px 6px; font:inherit; font-weight:600; }
+  .msg { display:flex; flex-direction:column; gap:10px; }
+  .who { display:flex; align-items:center; gap:8px; font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--color-neutral-700); }
+  .who .sq { width:7px; height:7px; }
+  .bubble-user { background:var(--color-surface); padding:12px 16px; white-space:pre-wrap; word-wrap:break-word; }
+  .bubble-err { border:2px solid var(--color-accent); padding:12px 16px; white-space:pre-wrap; word-wrap:break-word; color:var(--color-accent-700); font-size:14px; }
+  .answer { font-size:15.5px; line-height:1.72; white-space:pre-wrap; word-wrap:break-word; text-wrap:pretty; }
+  .answer strong { font-weight:800; }
+  .answer .md-h { display:inline-block; font-size:17px; font-weight:800; letter-spacing:-.01em; line-height:1.3; }
+  .answer .md-hr { display:block; height:2px; background:var(--color-divider); }
+  .answer code { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:.88em; background:var(--color-surface); padding:1px 5px; }
+  .answer .md-pre { margin:4px 0; padding:12px 14px; background:var(--color-surface); border-left:2px solid var(--color-accent); overflow-x:auto; white-space:pre; line-height:1.5; }
+  .answer .md-pre code { background:none; padding:0; font-size:13px; }
   .cite {
-    display:inline-block; min-width:16px; text-align:center;
-    background:var(--accent-soft); color:var(--accent); border:1px solid var(--accent-track);
-    border-radius:4px; padding:0 4px; margin:0 1px;
-    font:10.5px/1.5 var(--mono); font-weight:600; cursor:pointer; vertical-align:1.5px;
+    display:inline-block; min-width:18px; text-align:center; border:0; cursor:pointer;
+    background:var(--color-accent-100); color:var(--color-accent-800);
+    font-size:11px; font-weight:800; line-height:1.6; padding:0 4px; margin:0 1px; vertical-align:1px;
   }
-  .cite:hover { background:var(--accent); color:var(--accent-ink); border-color:var(--accent); }
-  details.src { margin-top:10px; }
-  details.src > summary {
-    cursor:pointer; list-style:none; display:inline-flex; align-items:center; gap:6px;
-    font:11.5px/1 var(--mono); color:var(--muted); padding:5px 9px;
-    border:1px solid var(--line); border-radius:99px;
-  }
-  details.src > summary::-webkit-details-marker { display:none; }
-  details.src > summary:hover { color:var(--fg); border-color:var(--line-2); }
-  details.src[open] > summary { margin-bottom:8px; }
-  .srcitem {
-    margin-top:6px; padding:9px 11px; background:var(--surface);
-    border:1px solid var(--line); border-radius:var(--r);
-    font-size:13px; line-height:1.6; white-space:pre-wrap; color:var(--fg-2);
-  }
-  .srcitem.hi { border-color:var(--warn); background:var(--surface-2); }
-  .srchead {
-    display:flex; align-items:center; gap:9px; margin-bottom:6px;
-    font:11px/1 var(--mono); color:var(--muted);
-  }
-  .srchead .n {
-    background:var(--accent-soft); color:var(--accent); border-radius:4px;
-    padding:2px 5px; font-weight:600;
-  }
-  .srchead .fn { color:var(--fg); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .srchead .sp { flex:1; }
-  /* Similarity is the number that decides whether a chunk was worth
-     retrieving, so it gets a bar as well as digits -- scannable down a list. */
-  .simbar { width:44px; height:3px; border-radius:99px; background:var(--accent-track); overflow:hidden; flex:none; }
-  .simbar > i { display:block; height:100%; background:var(--accent); }
-
-  .cursor::after { content:'▍'; margin-left:2px; color:var(--accent); animation:blink 1.05s steps(2) infinite; }
+  .cite:hover { background:var(--color-accent); color:var(--on-accent); }
+  .caret { color:var(--color-accent); margin-left:2px; animation:blink 1.05s steps(2) infinite; }
   @keyframes blink { 50% { opacity:0; } }
 
-  /* ---- empty states ---- */
-  .empty { max-width:420px; margin:14vh auto 0; text-align:center; }
-  .empty h2 { margin:0 0 5px; font-size:15px; font-weight:600; }
-  .empty p { margin:0; color:var(--muted); font-size:13.5px; }
-  .empty .keys { margin-top:14px; font:11.5px/1.8 var(--mono); color:var(--muted); }
-  kbd {
-    font:11px/1 var(--mono); background:var(--surface-2); border:1px solid var(--line);
-    border-bottom-width:2px; border-radius:4px; padding:3px 5px; color:var(--fg-2);
-  }
+  /* The receipt: every answer has a provider, a cost and a latency behind it. */
+  .receipt { display:flex; flex-wrap:wrap; border:1px solid var(--color-divider); }
+  .receipt .hit { display:flex; align-items:center; background:var(--color-accent); color:var(--on-accent); font-size:11px; font-weight:800; letter-spacing:.08em; padding:0 12px; }
+  .receipt .cell { display:flex; flex-direction:column; padding:6px 12px; border-right:1px solid var(--color-divider); }
+  .receipt .k { font-size:10px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--color-neutral-700); }
+  .receipt .v { font-size:13px; font-weight:600; font-variant-numeric:tabular-nums; }
+  .receipt .v.warn { color:var(--color-accent-700); }
+  .receipt .note { flex-basis:100%; border-top:1px solid var(--color-divider); padding:6px 12px; font-size:12px; color:var(--color-neutral-700); }
+
+  .src-toggle { align-self:flex-start; font-size:12px; padding:6px 10px; gap:8px; }
+  .src-toggle svg { transition:transform .12s; }
+  .src-toggle[aria-expanded="true"] svg { transform:rotate(180deg); }
+  .srcs { display:flex; flex-direction:column; border-top:2px solid var(--color-divider); }
+  .src { display:flex; flex-direction:column; gap:6px; padding:12px; border-bottom:1px solid var(--color-divider); transition:background .2s; }
+  .src.hi { background:var(--color-accent-100); }
+  .src-h { display:flex; align-items:center; gap:10px; font-size:12px; }
+  .src-n { min-width:22px; height:22px; display:grid; place-items:center; background:var(--color-accent); color:var(--on-accent); font-size:11px; font-weight:800; }
+  .src-f { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; }
+  .src-c { color:var(--color-neutral-700); white-space:nowrap; }
+  .simbar { width:56px; height:4px; flex:none; background:var(--accent-track); }
+  .simbar > i { display:block; height:100%; background:var(--color-accent); }
+  .src-s { font-weight:600; font-variant-numeric:tabular-nums; }
+  .src-x { font-size:13.5px; line-height:1.6; color:var(--color-neutral-800); white-space:pre-wrap; }
 
   /* ---- composer ---- */
-  footer { padding:8px 22px 20px; background:var(--bg); }
-  .composer-wrap { max-width:780px; margin:0 auto; }
-  #sys { display:none; margin-bottom:8px; font-size:13px; resize:vertical; }
-  .composer {
-    background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg);
-    padding:4px 4px 4px; transition:border-color .12s, box-shadow .12s;
+  .composer-zone { flex:none; padding:14px 32px 22px; border-top:2px solid var(--color-divider); }
+  .composer-wrap { max-width:800px; display:flex; flex-direction:column; gap:8px; }
+  #sys { min-height:60px; font-size:13px; resize:vertical; }
+  .composer { border:2px solid var(--color-divider); background:var(--color-surface); }
+  .composer:focus-within { border-color:var(--color-accent); }
+  #input {
+    display:block; width:100%; border:0; background:transparent; resize:none;
+    padding:14px 16px 4px; font-size:15px; outline:none; min-height:58px; max-height:200px;
   }
-  .composer:focus-within { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
-  textarea#input {
-    width:100%; border:0; background:transparent; resize:none;
-    min-height:44px; max-height:190px; padding:9px 10px 4px; font-size:14.5px;
-  }
-  textarea#input:focus { outline:none; box-shadow:none; }
-  .composer-bar { display:flex; align-items:center; gap:10px; padding:4px 6px 5px; flex-wrap:wrap; }
-  .actions { display:flex; gap:7px; margin-left:auto; }
-  #ragctl { display:none; gap:12px; align-items:center; flex-wrap:wrap; }
-  #ragctl.on { display:flex; }
-  #ragctl label { display:flex; align-items:center; gap:6px; font:11.5px/1 var(--mono); color:var(--muted); }
-  #ragctl input[type=number] { width:58px; padding:3px 6px; font-size:12px; }
-  #ragctl input[type=checkbox] { accent-color:var(--accent); width:14px; height:14px; }
+  .composer-bar { display:flex; align-items:center; gap:16px; padding:8px 8px 8px 16px; flex-wrap:wrap; }
+  .ragctl { display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+  .ragctl label { display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:var(--color-neutral-700); cursor:pointer; }
+  .ragctl .input { min-height:30px; padding:3px 6px; font-size:13px; background:var(--color-bg); color:var(--color-text); }
+  #topk { width:62px; } #minsim { width:70px; }
+  #retrieveOnly { accent-color:var(--color-accent); width:15px; height:15px; margin:0; }
+  .history { font-size:12px; color:var(--color-neutral-700); }
+  .actions { margin-left:auto; display:flex; gap:8px; }
+  #send { min-width:128px; justify-content:space-between; }
 
   /* ---- metrics ---- */
-  #metrics { display:none; flex:1; overflow-y:auto; padding:26px 22px 40px; }
-  #metrics.on { display:block; }
-  .mwrap { max-width:940px; margin:0 auto; display:grid; gap:14px; }
-  .mrow { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:2px; }
-  .mrow label { display:flex; align-items:center; gap:7px; font:11.5px/1 var(--mono); color:var(--muted); }
-  .mrow select { width:auto; }
-
-  /* One hero figure per view. For a gateway the headline question is
-     "what is this costing me", so spend leads and everything else supports.
-     Proportional digits, not tabular: at 54px, tabular gives every glyph the
-     width of a zero and the number reads visibly loose. */
-  .hero { background:var(--surface); border:1px solid var(--line); border-radius:var(--r-lg); padding:18px 20px; }
-  .hero .label { font:11px/1 var(--mono); letter-spacing:.5px; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
-  .hero .value { font-size:54px; line-height:1; font-weight:600; letter-spacing:-2px; }
-  .hero .sub { color:var(--muted); font:12px/1.6 var(--mono); margin-top:8px; }
-
-  .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(158px,1fr)); gap:10px; }
-  .kpi { background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:11px 13px; }
-  .kpi .label { font:11px/1 var(--mono); color:var(--muted); margin-bottom:6px; }
-  .kpi .value { font-size:23px; font-weight:600; line-height:1.15; letter-spacing:-.4px; }
-  .kpi .sub { color:var(--muted); font:11px/1.5 var(--mono); margin-top:3px; }
-
-  /* A single ratio against a limit is a meter, not a two-slice pie. The
-     unfilled track is a lighter step of the same ramp, so the state reads
-     across the whole bar instead of stopping at the fill. */
-  .meter { height:7px; border-radius:99px; background:var(--accent-track); overflow:hidden; }
-  .meter > span { display:block; height:100%; background:var(--accent); border-radius:99px; }
-
-  .card { background:var(--surface); border:1px solid var(--line); border-radius:var(--r); padding:13px 15px; }
-  .card h3 { margin:0 0 10px; font:11px/1 var(--mono); letter-spacing:.6px; text-transform:uppercase; color:var(--muted); font-weight:600; }
-  .card .cap { color:var(--muted); font:11.5px/1.5 var(--mono); margin-top:8px; }
-  .scroll-x { overflow-x:auto; margin:0 -15px; padding:0 15px; }
-  table.m { width:100%; border-collapse:collapse; font-size:12.5px; }
-  table.m th {
-    text-align:left; padding:0 10px 7px 0; white-space:nowrap;
-    font:10.5px/1 var(--mono); letter-spacing:.5px; text-transform:uppercase; color:var(--muted); font-weight:600;
-  }
-  table.m td { padding:6px 10px 6px 0; border-top:1px solid var(--line); white-space:nowrap; }
-  table.m tr:hover td { background:var(--surface-2); }
-  table.m td.mono { font-family:var(--mono); font-size:12px; color:var(--fg-2); }
-  /* tabular-nums belongs here: columns of numbers that must align vertically. */
-  table.m td.n, table.m th.n { text-align:right; font-variant-numeric:tabular-nums; font-family:var(--mono); font-size:12px; padding-right:0; }
-  .pill { background:var(--ok); color:var(--ok-ink); border-radius:4px; padding:1px 5px; font:9.5px/1.6 var(--mono); font-weight:700; letter-spacing:.4px; }
-  .mempty { color:var(--muted); text-align:center; padding:34px 0; font-size:13.5px; }
-
-  .toast { font:11.5px/1.5 var(--mono); color:var(--muted); min-height:17px; }
-  .toast.bad { color:var(--err); }
+  .metrics { flex:1; min-height:0; overflow-y:auto; padding:28px 32px 40px; }
+  .mwrap { max-width:1080px; display:flex; flex-direction:column; gap:24px; }
+  .mrow { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .seg { display:inline-flex; border:1px solid var(--color-divider); }
+  .seg button { border:0; border-right:1px solid var(--color-divider); background:transparent; font-size:13px; font-weight:600; padding:7px 14px; cursor:pointer; }
+  .seg button:last-child { border-right:0; }
+  .seg button:hover:not(.on) { background:color-mix(in srgb,var(--color-text) 7%,transparent); }
+  .seg button.on { background:var(--color-text); color:var(--color-bg); }
+  .mempty { border:2px solid var(--color-divider); padding:40px 32px; display:flex; flex-direction:column; gap:6px; }
+  .mempty .h { font-size:22px; font-weight:800; }
+  .mgrid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:2px; background:var(--color-divider); border:2px solid var(--color-divider); }
+  /* One hero figure per view. Spend leads: an LLM gateway's headline question
+     is "what is this costing me". Proportional digits on purpose -- at 92px
+     tabular figures make every glyph as wide as a zero. */
+  .hero { grid-column:span 2; grid-row:span 2; background:var(--color-accent); color:var(--on-accent); padding:24px; display:flex; flex-direction:column; justify-content:space-between; gap:24px; min-height:248px; }
+  .hero .label { font-size:12px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; }
+  .hero .val { display:flex; flex-direction:column; gap:10px; }
+  .hero .value { font-size:92px; font-weight:800; line-height:.9; letter-spacing:-.045em; overflow-wrap:anywhere; }
+  .hero .sub { font-size:14px; font-weight:600; }
+  .kpi { background:var(--color-bg); padding:18px 20px; display:flex; flex-direction:column; gap:6px; min-width:0; }
+  .kpi .label, .meter-cell .label { font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--color-neutral-700); }
+  .kpi .value { font-size:34px; font-weight:800; line-height:1.05; letter-spacing:-.02em; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+  .kpi .sub, .meter-cell .sub { font-size:12px; color:var(--color-neutral-700); }
+  .meter-cell { grid-column:span 4; background:var(--color-bg); padding:18px 20px; display:flex; flex-direction:column; gap:10px; }
+  .meter { height:10px; background:var(--accent-track); }
+  .meter > span { display:block; height:100%; background:var(--color-accent); }
+  .mtable { display:flex; flex-direction:column; gap:8px; }
+  .mtable .cap { font-size:13px; }
+  .tscroll { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th { text-align:left; font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:color-mix(in srgb,var(--color-text) 60%,transparent); padding:8px; border-bottom:2px solid var(--color-divider); white-space:nowrap; }
+  td { padding:8px; border-bottom:1px solid var(--color-divider); white-space:nowrap; }
+  tbody tr:hover { background:color-mix(in srgb,var(--color-text) 4%,transparent); }
+  th.n, td.n { text-align:right; font-variant-numeric:tabular-nums; }
+  td.b { font-weight:600; }
+  td.t { font-variant-numeric:tabular-nums; }
+  .pill { background:var(--color-accent); color:var(--on-accent); font-weight:800; padding:1px 6px; font-size:10px; letter-spacing:.06em; }
 
   @media (prefers-reduced-motion: reduce) {
     *, *::after { animation:none !important; transition:none !important; }
   }
 
-  /* ---- responsive: sidebar becomes a drawer ---- */
+  /* ---- narrow screens: the sidebar becomes a drawer ---- */
+  #scrim { display:none; }
   @media (max-width:860px) {
-    .side {
-      position:fixed; inset:0 auto 0 0; z-index:20;
-      transform:translateX(-100%); transition:transform .16s ease;
-    }
+    .side { position:fixed; inset:0 auto 0 0; z-index:20; transform:translateX(-100%); transition:transform .16s ease; }
     .side.open { transform:none; }
-    #menu { display:grid; }
-    #scrim { position:fixed; inset:0; background:#0007; z-index:19; display:none; }
-    #scrim.on { display:block; }
-    #log, #metrics { padding-left:16px; padding-right:16px; }
-    footer { padding-left:16px; padding-right:16px; }
-    .topbar { padding:11px 16px; }
-    .topbar .route { display:none; }
-    .hero .value { font-size:42px; }
+    #scrim.on { display:block; position:fixed; inset:0; z-index:19; background:color-mix(in srgb,#000 45%,transparent); }
+    #menu { display:inline-flex; }
+    .topbar { padding:0 16px; gap:8px; }
+    .topbar .route, #modeTag, #toggleSys { display:none; }
+    .log, .metrics { padding-left:16px; padding-right:16px; }
+    .composer-zone { padding-left:16px; padding-right:16px; }
+    .mgrid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .meter-cell { grid-column:span 2; }
+    .hero .value { font-size:64px; }
+  }
+  @media (max-width:520px) {
+    .mgrid { grid-template-columns:minmax(0,1fr); }
+    .hero, .meter-cell { grid-column:span 1; }
+    .hero { grid-row:auto; min-height:200px; }
+    .empty .h { font-size:28px; }
   }
 </style>
 </head>
 <body>
 
 <div class="app">
-
-  <aside class="side" id="side">
+  <aside class="side" id="side" aria-label="Console sidebar">
     <div class="brand">
       <span class="mark" aria-hidden="true">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v5h5"/><path d="M19 10v9a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7z"/></svg>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v5h5"/><path d="M19 10v9a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7z"/></svg>
       </span>
       <b>docXpo</b>
-      <span class="ver">console</span>
+      <span class="ver muted">console</span>
     </div>
 
-    <nav class="nav" aria-label="Views">
-      <button id="mChat" class="on" type="button">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.9 8.9 0 0 1-4-.9L3 21l1.9-4.9A8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4z"/></svg>
-        Chat
-      </button>
-      <button id="mRag" type="button">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-        Ask docs
-      </button>
-      <button id="mMetrics" type="button">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
-        Metrics
-      </button>
-    </nav>
+    <nav class="nav" id="nav" aria-label="Views"></nav>
 
-    <section class="sec" id="docs">
-      <div class="sec-h">
-        <span>Corpus</span>
-        <span class="n" id="doccount"></span>
+    <section class="corpus" aria-label="Corpus">
+      <div class="corpus-h">
+        <span class="cap">Corpus</span>
+        <span class="n muted" id="doccount"></span>
         <span class="sp"></span>
-        <button class="icon-btn" id="refresh" type="button" title="Refresh list" aria-label="Refresh document list">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>
+        <button type="button" class="btn btn-secondary sq-btn" id="refresh" title="Refresh list" aria-label="Refresh document list">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
         </button>
       </div>
-
-      <div class="drop" id="drop" tabindex="0" role="button" aria-label="Choose a file to index">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
-        <p>Drop a file, or click to choose</p>
-        <span>pdf · txt · md · json · csv · py · js</span>
+      <div class="drop" id="drop" role="button" tabindex="0" aria-label="Choose a file to index">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+        <span class="t">Drop a file, or click to choose</span>
+        <span class="s muted">pdf · txt · md · json · csv · py · js</span>
       </div>
-      <input type="file" id="file" accept=".pdf,.txt,.md,.json,.csv,.log,.py,.js,.html,application/pdf,text/*">
-
-      <div class="paste-row">
-        <textarea id="paste" rows="2" placeholder="…or paste text to index"></textarea>
-        <button class="btn sm" id="pasteBtn" type="button">Index pasted text</button>
+      <input type="file" id="file" hidden accept=".pdf,.txt,.md,.json,.csv,.log,.py,.js,.html,application/pdf,text/*">
+      <div class="paste">
+        <textarea class="input" id="paste" placeholder="…or paste text to index" aria-label="Text to index"></textarea>
+        <button type="button" class="btn btn-secondary" id="pasteBtn">Index pasted text</button>
       </div>
-
       <div class="doclist" id="doclist"></div>
-      <div id="docmsg" class="toast"></div>
+      <div class="docmsg" id="docmsg" role="status"></div>
     </section>
 
     <div class="settings">
-      <div class="field">
-        <label for="provider">provider</label>
-        <select id="provider">
+      <label><span>Provider</span>
+        <select class="input" id="provider">
           <option value="">default</option>
           <option value="gemini">gemini</option>
           <option value="anthropic">anthropic</option>
           <option value="openai">openai</option>
           <option value="ollama">ollama</option>
         </select>
-      </div>
-      <div class="field">
-        <label for="model">model</label>
-        <input id="model" type="text" placeholder="(provider default)">
-      </div>
-      <div class="field">
-        <label for="apikey">api key</label>
-        <input id="apikey" type="password" placeholder="(none)" autocomplete="off">
-      </div>
+      </label>
+      <label><span>Model</span>
+        <input class="input" id="model" type="text" placeholder="(provider default)">
+      </label>
+      <label><span>API key</span>
+        <input class="input" id="apikey" type="password" placeholder="(none)" autocomplete="off">
+      </label>
     </div>
   </aside>
 
   <main class="main">
     <div class="topbar">
-      <button class="icon-btn" id="menu" type="button" aria-label="Toggle sidebar">
+      <button type="button" class="btn btn-secondary btn-icon" id="menu" aria-label="Open sidebar">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
       </button>
-      <h1 id="viewTitle">Chat</h1>
-      <span class="sub" id="viewSub">Straight to the model, no retrieval</span>
-      <span class="sp"></span>
-      <span class="route" id="hint"><span class="m">POST</span><code>/v1/chat</code></span>
-      <button class="btn" id="toggleSys" type="button">System prompt</button>
-      <button class="btn" id="reset" type="button">New chat</button>
-    </div>
-
-    <div id="log">
-      <div class="wrap">
-        <div class="empty">
-          <h2>Send a message to start</h2>
-          <p>Chat goes straight to the selected provider. Switch to Ask docs to answer from your indexed corpus instead.</p>
-          <div class="keys"><kbd>Enter</kbd> send &nbsp;·&nbsp; <kbd>Shift</kbd>+<kbd>Enter</kbd> newline</div>
-        </div>
+      <div class="titles">
+        <span class="title" id="viewTitle">Chat</span>
+        <span class="sub muted" id="viewSub">Straight to the model, no retrieval</span>
       </div>
+      <span class="sp"></span>
+      <span class="route" id="route"><span class="m">POST</span><span class="p">/v1/chat</span></span>
+      <span class="tag tag-neutral" id="modeTag"><span class="sq"></span><span id="modeLabel">CONNECTING</span></span>
+      <button type="button" class="btn btn-secondary" id="toggleSys">System prompt</button>
+      <button type="button" class="btn btn-secondary" id="newBtn">New chat</button>
+      <button type="button" class="btn btn-secondary btn-icon" id="themeBtn" aria-label="Toggle theme"></button>
     </div>
 
-    <section id="metrics">
+    <section class="metrics" id="metrics" hidden>
       <div class="mwrap">
         <div class="mrow">
-          <label for="mwindow">window
-            <select id="mwindow">
-              <option value="1">last hour</option>
-              <option value="24" selected>last 24h</option>
-              <option value="168">last 7 days</option>
-              <option value="0">all time</option>
-            </select>
-          </label>
-          <button class="btn sm" id="mrefresh" type="button">Refresh</button>
-          <span id="mstatus" class="toast"></span>
+          <span class="cap">Window</span>
+          <div class="seg" id="mwindow" role="group" aria-label="Metrics window"></div>
+          <button type="button" class="btn btn-secondary" id="mrefresh" style="font-size:13px">Refresh</button>
+          <span class="muted" id="mstatus" style="font-size:12px" role="status"></span>
         </div>
-        <div id="mbody"></div>
+        <div id="mbody" style="display:flex;flex-direction:column;gap:24px"></div>
       </div>
     </section>
 
-    <footer>
-      <div class="composer-wrap">
-        <textarea id="sys" rows="2" placeholder="Optional system prompt — chat mode only (RAG supplies its own)"></textarea>
-        <div class="composer">
-          <textarea id="input" rows="1" placeholder="Ask something…"></textarea>
-          <div class="composer-bar">
-            <div id="ragctl">
-              <label>top_k <input id="topk" type="number" min="1" max="20" value="5"></label>
-              <label>min_sim <input id="minsim" type="number" min="0" max="1" step="0.05" value="0.5"></label>
-              <label title="Retrieve chunks without generating an answer. Costs no generation quota.">
-                <input type="checkbox" id="retrieveOnly"> retrieve only
-              </label>
-            </div>
-            <div class="actions">
-              <button class="btn" id="stop" disabled>Stop</button>
-              <button class="btn primary" id="send">Send</button>
+    <div class="pane" id="pane">
+      <div class="log" id="log"><div class="thread" id="thread"></div></div>
+      <div class="composer-zone">
+        <div class="composer-wrap">
+          <textarea class="input" id="sys" hidden placeholder="Optional system prompt — chat mode only (RAG supplies its own)" aria-label="System prompt"></textarea>
+          <div class="composer">
+            <textarea id="input" rows="2" placeholder="Ask something…" aria-label="Message"></textarea>
+            <div class="composer-bar">
+              <div class="ragctl" id="ragctl" hidden>
+                <label>top_k<input class="input" id="topk" type="number" min="1" max="20" value="5"></label>
+                <label>min_sim<input class="input" id="minsim" type="number" min="0" max="1" step="0.05" value="0.5"></label>
+                <label title="Retrieve chunks without generating an answer. Costs no generation quota."><input type="checkbox" id="retrieveOnly">retrieve only</label>
+              </div>
+              <span class="history" id="history"></span>
+              <div class="actions">
+                <button type="button" class="btn btn-secondary" id="stop" disabled>Stop</button>
+                <button type="button" class="btn btn-primary" id="send"><span id="sendLabel">Send</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></button>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </footer>
+    </div>
   </main>
 </div>
 <div id="scrim"></div>
 
 <script>
 // ---------------------------------------------------------------------------
-// Why fetch() and not EventSource:
-// EventSource is the browser's built-in SSE client, but it can only issue GET
-// requests and cannot set a body. Both of our streaming endpoints are POSTs
-// with JSON payloads, so we read the response stream and parse SSE frames
-// ourselves.
+// Why fetch() and not EventSource: EventSource can only issue GET requests and
+// cannot send a body. Both streaming endpoints are POSTs with JSON payloads,
+// so the response stream is read and the SSE frames are parsed by hand.
 // ---------------------------------------------------------------------------
 
 const $ = (id) => document.getElementById(id);
-const log = $('log').firstElementChild;
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
-let mode = 'chat';     // 'chat' | 'rag' | 'metrics'
-let history = [];      // chat mode only; RAG is single-shot per question
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch { /* private mode */ } },
+};
+
+const ICON = {
+  chat: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+  rag: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>',
+  metrics: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>',
+  moon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>',
+  sun: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>',
+  file: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>',
+  trash: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>',
+  chev: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>',
+};
+
+/** One place that knows what each view is called and where it posts. */
+const VIEWS = {
+  chat:    { title: 'Chat',     sub: 'Straight to the model, no retrieval',      route: '/v1/chat',      method: 'POST' },
+  rag:     { title: 'Ask docs', sub: 'Answers grounded in your indexed corpus',  route: '/v1/rag/query', method: 'POST' },
+  metrics: { title: 'Metrics',  sub: 'Spend, latency and cache across requests', route: '/v1/metrics',   method: 'GET' },
+};
+const DEFAULT_MODELS = { gemini: 'gemini-flash-latest', anthropic: 'claude-sonnet-4-6', openai: 'gpt-4o-mini', ollama: 'llama3.2' };
+const WINDOWS = [['1', '1h'], ['24', '24h'], ['168', '7d'], ['0', 'All time']];
+const WINDOW_LABEL = { 1: 'last hour', 24: 'last 24 hours', 168: 'last 7 days', 0: 'all time' };
+
+// The view lives in the URL hash (#chat, #rag, #metrics) so a view can be
+// linked to and survives a reload.
+const viewFromHash = () => {
+  const h = location.hash.slice(1);
+  return VIEWS[h] ? h : 'chat';
+};
+
+const S = {
+  view: viewFromHash(),
+  theme: store.get('docxpo_theme')
+    || (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
+  mode: 'checking',          // 'checking' | 'live' | 'offline'
+  chat: [], rag: [],
+  showSys: false, retrieveOnly: false,
+  docs: [], pendingDel: null,
+  mWindow: '24', metrics: null, recent: [], mStatus: '',
+  busy: false, openSrc: {}, hiSrc: null,
+};
+let seq = 0;
 let controller = null;
+let delTimer = null, docTimer = null, hiTimer = null;
 
-// Every call to /v1/* goes through this, so the key is attached in exactly
-// one place. Stored in localStorage: it is a dev console, and typing the key
-// on every reload would make the feature unusable. Not appropriate for a real
-// product -- localStorage is readable by any script on the origin.
-function authHeaders(base = {}) {
+// ---- formatting ------------------------------------------------------------
+
+/** Auto-compact for stat tiles: 1,284 / 12.9K / 4.2M. */
+function compact(n) {
+  if (n === null || n === undefined) return '—';
+  if (n >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M';
+  if (n >= 1e4) return (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'K';
+  return Number(n).toLocaleString();
+}
+/** Money: keep enough precision that a sub-cent request isn't shown as $0. */
+function money(v) {
+  const n = Number(v);
+  if (!isFinite(n) || n === 0) return '$0';
+  if (n < 0.01) return '$' + n.toFixed(6).replace(/0+$/, '').replace(/\.$/, '');
+  if (n < 1000) return '$' + n.toFixed(4).replace(/0+$/, '').replace(/\.$/, '');
+  return '$' + compact(n);
+}
+const ms = (v) => (v === null || v === undefined ? '—' : Math.round(v).toLocaleString() + 'ms');
+const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+
+// ---- HTTP ------------------------------------------------------------------
+
+/** Every call to /v1/* goes through this, so the key is attached in one place. */
+function headers(base = {}) {
   const k = $('apikey').value.trim();
   return k ? { ...base, 'X-API-Key': k } : base;
 }
 
 /**
  * Read a failed response's body exactly once, then try to parse it as JSON.
- * A Response body can only be consumed a single time -- calling res.json()
- * and, on failure, falling back to res.text() throws "body already consumed",
- * because res.json() drains the stream before it discovers the JSON is
- * invalid. Reading as text first and parsing that string avoids the double
- * read entirely.
+ * res.json() drains the stream before discovering the JSON is invalid, so a
+ * res.text() fallback after it throws "body already consumed".
  */
 async function errorDetail(res) {
   const raw = await res.text();
-  try {
-    const parsed = JSON.parse(raw);
-    return parsed.detail ?? parsed;
-  } catch {
-    return raw;
-  }
+  try { const p = JSON.parse(raw); return p.detail ?? p; } catch { return raw; }
 }
 
-/** Surface 401/429 clearly instead of as a generic failure. */
+/**
+ * Turn a failed response into a sentence. Two different things share HTTP 429:
+ * docXpo's own per-key limiter (detail.type "RateLimitExceeded") and an
+ * upstream provider's rate/quota limit forwarded as-is. The limiter's headers
+ * are stamped on every response, so only detail.type tells them apart.
+ */
 function limitMessage(res, detail) {
   if (res.status === 401) return 'Unauthorized — set your API key in the sidebar.';
-  // Two different things share HTTP 429: docXpo's own per-key limiter
-  // (detail.type === "RateLimitExceeded", from rate_limit_middleware.py), and
-  // an upstream provider's own rate/quota limit forwarded as-is (detail.type
-  // is a ProviderError subclass name, e.g. "ProviderRateLimited"). The local
-  // limiter's headers are stamped on *every* response regardless of which one
-  // fired, so checking detail.type -- not just the status code -- is the only
-  // reliable way to tell them apart.
   if (res.status === 429 && detail?.type === 'RateLimitExceeded') {
     const retry = res.headers.get('Retry-After');
     return `Rate limited by docXpo${retry ? ` — retry in ${retry}s` : ''}. `
@@ -575,84 +520,158 @@ function limitMessage(res, detail) {
   return typeof detail === 'string' ? detail : (detail?.error ?? JSON.stringify(detail));
 }
 
-const esc = (s) => s.replace(/[&<>"]/g, (c) =>
-  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+/** POST a JSON body and dispatch each SSE frame as it arrives. */
+async function streamSSE(url, payload, signal, onEvent) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: headers({ 'content-type': 'application/json' }),
+    body: JSON.stringify(payload),
+    signal,
+  });
+  // Failures before streaming starts arrive as a real HTTP status, because the
+  // server pulls the first event before committing to a 200.
+  if (!res.ok) throw new Error(limitMessage(res, await errorDetail(res)));
 
-/** One place that knows what each view is called and where it posts. */
-const VIEWS = {
-  chat:    { title: 'Chat',    sub: 'Straight to the model, no retrieval',        route: '/v1/chat' },
-  rag:     { title: 'Ask docs', sub: 'Answers grounded in your indexed corpus',   route: '/v1/rag/query' },
-  metrics: { title: 'Metrics', sub: 'Spend, latency and cache across requests',   route: '/v1/metrics' },
-};
-
-function setMode(next) {
-  mode = next;
-  $('mChat').classList.toggle('on', next === 'chat');
-  $('mRag').classList.toggle('on', next === 'rag');
-  $('mMetrics').classList.toggle('on', next === 'metrics');
-
-  const v = VIEWS[next];
-  $('viewTitle').textContent = v.title;
-  $('viewSub').textContent = v.sub;
-  $('hint').innerHTML = `<span class="m">${next === 'metrics' ? 'GET' : 'POST'}</span><code>${v.route}</code>`;
-
-  const showingMetrics = next === 'metrics';
-  $('metrics').classList.toggle('on', showingMetrics);
-  $('log').style.display = showingMetrics ? 'none' : 'block';
-  document.querySelector('footer').style.display = showingMetrics ? 'none' : 'block';
-  $('toggleSys').style.display = showingMetrics ? 'none' : '';
-  $('reset').style.display = showingMetrics ? 'none' : '';
-  if (showingMetrics) { loadMetrics(); return; }
-
-  $('ragctl').classList.toggle('on', next === 'rag');
-  if (next === 'rag') $('sys').style.display = 'none';
-  $('input').placeholder = next === 'rag'
-    ? 'Ask about your documents…'
-    : 'Ask something…';
-  if (next === 'rag') loadDocs();
-  closeDrawer();
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    // {stream:true}: a multi-byte character can straddle two network chunks.
+    buf += decoder.decode(value, { stream: true });
+    let i;
+    while ((i = buf.indexOf('\n\n')) !== -1) {
+      const frame = buf.slice(0, i);
+      buf = buf.slice(i + 2);
+      let event = 'message', data = '';
+      for (const line of frame.split('\n')) {
+        if (line.startsWith('event: ')) event = line.slice(7);
+        else if (line.startsWith('data: ')) data += line.slice(6);
+      }
+      if (data) onEvent(event, JSON.parse(data));
+    }
+  }
 }
 
-// ---- documents ------------------------------------------------------------
+/** Is a docXpo API answering on this origin? 401 counts: it exists, it wants a key. */
+async function probe() {
+  try {
+    const r = await fetch('/v1/documents?limit=1', { headers: headers({ accept: 'application/json' }) });
+    if (r.status === 401) return true;
+    return (r.headers.get('content-type') || '').includes('json');
+  } catch { return false; }
+}
+
+// ---- theme -----------------------------------------------------------------
+
+function applyTheme() {
+  document.documentElement.dataset.theme = S.theme;
+  $('themeBtn').innerHTML = S.theme === 'dark' ? ICON.sun : ICON.moon;
+  $('themeBtn').setAttribute('aria-label', S.theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
+}
+
+// ---- view chrome -----------------------------------------------------------
+
+const kind = () => (S.view === 'rag' ? 'rag' : 'chat');
+
+function renderNav() {
+  $('nav').innerHTML = ['chat', 'rag', 'metrics'].map((id) => {
+    const on = id === S.view;
+    return `<button type="button" data-view="${id}" class="${on ? 'on' : ''}"${on ? ' aria-current="page"' : ''}>`
+      + `${ICON[id]}<span class="lbl">${VIEWS[id].title}</span><span class="meth">${VIEWS[id].method}</span></button>`;
+  }).join('');
+}
+
+function renderTopbar() {
+  const v = VIEWS[S.view];
+  const isRag = S.view === 'rag', isChat = S.view === 'chat', isMetrics = S.view === 'metrics';
+  const retrieving = isRag && S.retrieveOnly;
+  $('viewTitle').textContent = v.title;
+  $('viewSub').textContent = v.sub;
+  $('route').innerHTML = `<span class="m">${v.method}</span><span class="p">${retrieving ? '/v1/rag/retrieve' : v.route}</span>`;
+
+  const mode = {
+    live: ['LIVE API', 'var(--color-accent)', 'Connected to the docXpo API on this origin.'],
+    offline: ['API UNREACHABLE', 'var(--color-neutral-500)', 'No docXpo API answered at this origin. Check that the server is running, then reload.'],
+    checking: ['CONNECTING', 'var(--color-neutral-500)', 'Checking for the docXpo API…'],
+  }[S.mode];
+  $('modeLabel').textContent = mode[0];
+  $('modeTag').querySelector('.sq').style.background = mode[1];
+  $('modeTag').title = mode[2];
+
+  $('toggleSys').hidden = !isChat;
+  $('toggleSys').textContent = S.showSys ? 'Hide system prompt' : 'System prompt';
+  $('newBtn').hidden = isMetrics;
+  $('newBtn').textContent = isRag ? 'Clear thread' : 'New chat';
+}
+
+function renderPane() {
+  const isMetrics = S.view === 'metrics';
+  $('metrics').hidden = !isMetrics;
+  $('pane').hidden = isMetrics;
+  if (isMetrics) { renderMetrics(); return; }
+  renderThread();
+  renderComposer();
+}
+
+function renderAll() {
+  applyTheme();
+  renderNav();
+  renderTopbar();
+  renderDocs();
+  renderPane();
+}
+
+function setView(v) {
+  S.view = v;
+  if (location.hash.slice(1) !== v) history.replaceState(null, '', '#' + v);
+  closeDrawer();
+  renderNav();
+  renderTopbar();
+  renderPane();
+  if (v === 'metrics') loadMetrics();
+  if (v === 'rag') loadDocs();
+}
+
+// ---- documents -------------------------------------------------------------
 
 function docMsg(text, bad = false) {
   const el = $('docmsg');
   el.textContent = text;
-  el.className = 'toast' + (bad ? ' bad' : '');
-  if (text) setTimeout(() => { if (el.textContent === text) el.textContent = ''; }, 4000);
+  el.className = 'docmsg' + (bad ? ' bad' : '');
+  clearTimeout(docTimer);
+  if (text) docTimer = setTimeout(() => { if (el.textContent === text) el.textContent = ''; }, 4000);
+}
+
+function renderDocs() {
+  $('doccount').textContent = S.docs.length ? String(S.docs.length) : '';
+  const list = $('doclist');
+  if (!S.docs.length) {
+    list.innerHTML = S.mode === 'checking' ? '' : '<div class="none muted">Nothing indexed yet.</div>';
+    return;
+  }
+  list.innerHTML = S.docs.map((d) => {
+    const pending = S.pendingDel === d.id;
+    const title = `${d.filename} · ${plural(d.chunk_count, 'chunk')} · ${Number(d.char_count).toLocaleString()} chars`;
+    return `<div class="doc" title="${esc(title)}">${ICON.file}`
+      + `<span class="nm">${esc(d.filename)}</span>`
+      + `<span class="meta muted">${d.chunk_count}c</span>`
+      + (pending
+        ? `<button type="button" class="btn btn-primary confirm" data-del="${esc(d.id)}">Delete?</button>`
+        : `<button type="button" class="btn del" data-del="${esc(d.id)}" aria-label="Delete ${esc(d.filename)}">${ICON.trash}</button>`)
+      + `</div>`;
+  }).join('');
 }
 
 async function loadDocs() {
+  if (S.mode !== 'live') return;
   try {
-    const res = await fetch('/v1/documents?limit=100', { headers: authHeaders() });
-    const data = await res.json();
-    const list = $('doclist');
-    $('doccount').textContent = data.documents.length ? String(data.documents.length) : '';
-    if (!data.documents.length) {
-      list.innerHTML = '<div class="toast">Nothing indexed yet.</div>';
-      return;
-    }
-    list.innerHTML = '';
-    for (const d of data.documents) {
-      const row = document.createElement('div');
-      row.className = 'doc';
-      row.innerHTML =
-        `<span class="nm"></span>` +
-        `<span class="meta">${d.chunk_count}c</span>` +
-        `<button class="icon-btn" type="button" aria-label="Delete document">` +
-        `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>` +
-        `</button>`;
-      const nm = row.querySelector('.nm');
-      nm.textContent = d.filename;
-      nm.title = `${d.filename} · ${d.chunk_count} chunk${d.chunk_count === 1 ? '' : 's'} · ${d.char_count.toLocaleString()} chars`;
-      row.querySelector('button').onclick = async () => {
-        if (!confirm(`Delete "${d.filename}" and its chunks?`)) return;
-        const r = await fetch(`/v1/documents/${d.id}`, { method: 'DELETE', headers: authHeaders() });
-        docMsg(r.ok ? 'deleted' : 'delete failed', !r.ok);
-        loadDocs();
-      };
-      list.appendChild(row);
-    }
+    const res = await fetch('/v1/documents?limit=100', { headers: headers() });
+    if (!res.ok) { docMsg(limitMessage(res, await errorDetail(res)), true); return; }
+    S.docs = (await res.json()).documents;
+    renderDocs();
+    if (S.view === 'rag') renderThread();   // the empty state quotes the doc count
   } catch (e) {
     docMsg('could not load documents: ' + e.message, true);
   }
@@ -662,25 +681,482 @@ async function ingest(fn) {
   docMsg('indexing… (embedding takes a few seconds)');
   try {
     const res = await fn();
-    if (!res.ok) {
-      docMsg(limitMessage(res, await errorDetail(res)), true);
-      return;
-    }
+    if (!res.ok) { docMsg(limitMessage(res, await errorDetail(res)), true); return false; }
     const doc = await res.json();
-    docMsg(`indexed ${doc.filename} — ${doc.chunk_count} chunks`);
+    docMsg(`indexed ${doc.filename} — ${plural(doc.chunk_count, 'chunk')}`);
     loadDocs();
+    return true;
   } catch (e) {
     docMsg(e.message, true);
+    return false;
   }
 }
 
 function uploadFile(f) {
-  if (!f) return docMsg('choose a file first', true);
+  if (!f) { docMsg('choose a file first', true); return; }
   const body = new FormData();
   body.append('file', f);
   // No content-type header: the browser must set the multipart boundary itself.
-  ingest(() => fetch('/v1/documents', { method: 'POST', body, headers: authHeaders() }));
+  ingest(() => fetch('/v1/documents', { method: 'POST', body, headers: headers() }));
 }
+
+async function indexPaste() {
+  const content = $('paste').value.trim();
+  if (!content) { docMsg('paste some text first', true); return; }
+  const ok = await ingest(() => fetch('/v1/documents/text', {
+    method: 'POST',
+    headers: headers({ 'content-type': 'application/json' }),
+    body: JSON.stringify({ filename: 'pasted.txt', content }),
+  }));
+  if (ok) $('paste').value = '';
+}
+
+/** Two clicks: the first arms "Delete?", the second deletes. Disarms after 3s. */
+async function deleteDoc(id) {
+  if (S.pendingDel !== id) {
+    S.pendingDel = id;
+    renderDocs();
+    clearTimeout(delTimer);
+    delTimer = setTimeout(() => { S.pendingDel = null; renderDocs(); }, 3000);
+    return;
+  }
+  clearTimeout(delTimer);
+  S.pendingDel = null;
+  const r = await fetch(`/v1/documents/${encodeURIComponent(id)}`, { method: 'DELETE', headers: headers() });
+  docMsg(r.ok ? 'deleted' : 'delete failed', !r.ok);
+  loadDocs();
+}
+
+// ---- thread ----------------------------------------------------------------
+
+function receiptCells(r) {
+  if (!r) return [];
+  if (r.cached) return [
+    ['similarity', Number(r.similarity).toFixed(4)],
+    ['latency', Number(r.latency).toFixed(1) + 'ms'],
+    ['saved', (r.saved ?? 0) + ' tok'],
+    ['age', Math.round(r.age || 0) + 's'],
+    ['model', r.model],
+  ];
+  const out = [
+    ['provider', r.provider],
+    ['model', r.model],
+    ['in', String(r.input ?? '—')],
+    ['out', String(r.output ?? '—')],
+    ['ttft', r.ttft == null ? '—' : ms(r.ttft)],
+    ['total', ms(r.total)],
+  ];
+  if (r.finish === 'max_tokens') out.push(['finish', 'truncated (max_tokens)', true]);
+  if (r.finish === 'no_context') out.push(['finish', 'nothing cleared min_sim', true]);
+  return out;
+}
+
+function receiptHTML(r) {
+  if (!r) return '';
+  const cells = receiptCells(r).map(([k, v, warn]) =>
+    `<div class="cell"><span class="k">${k}</span><span class="v${warn ? ' warn' : ''}">${esc(v)}</span></div>`).join('');
+  // Show which earlier question a cached answer was written for, so a
+  // wrong-looking answer is immediately explainable.
+  const note = r.cached && r.cachedQuestion && r.similarity < 1
+    ? `<div class="note">matched earlier question: “${esc(r.cachedQuestion)}”</div>` : '';
+  return `<div class="receipt">${r.cached ? '<span class="hit">CACHE HIT</span>' : ''}${cells}${note}</div>`;
+}
+
+// ---- answer rendering --------------------------------------------------------
+// Models answer in Markdown. This renders the small subset they actually use
+// (headings, lists, bold, italic, inline code, fenced code) and nothing else.
+// The text is HTML-escaped *first* and the patterns run on the escaped string,
+// so model output can never inject markup into the page.
+
+// Some models (gpt-oss) cite as 【4†L1-L5】 instead of [4]; normalise to [n].
+const ALT_CITE = /【(\d+)(?:†[^】]*)?】/g;
+
+function mdInline(s) {
+  return s
+    .replace(/`([^`\n]+)`/g, '<code>$1</code>')
+    .replace(/\*\*(?=\S)([^*\n]*?\S)\*\*/g, '<strong>$1</strong>')
+    .replace(/(^|[^*\w])\*(?=\S)([^*\n]*?\S)\*(?![*\w])/g, '$1<em>$2</em>');
+}
+
+function proseHTML(text, m, linkCites) {
+  const srcs = m.sources || [];
+  let html = esc(text).split('\n').map((line) => {
+    const h = /^\s*#{1,6}\s+(.*)$/.exec(line);
+    if (h) return `<span class="md-h">${h[1]}</span>`;
+    if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) return '<span class="md-hr"></span>';
+    const li = /^(\s*)[-*+]\s+(.*)$/.exec(line);
+    if (li) return `${li[1]}• ${li[2]}`;
+    return line;
+  }).join('\n');
+  html = mdInline(html);
+  if (linkCites) {
+    // Turn [1] / [2] in the finished answer into clickable citation chips.
+    html = html.replace(/\[(\d+)\]/g, (x, n) => (Number(n) <= srcs.length
+      ? `<button type="button" class="cite" data-msg="${m.id}" data-n="${n}" title="Jump to source ${n}">${n}</button>`
+      : x));
+  }
+  return html;
+}
+
+function answerHTML(m) {
+  const linkCites = !m.streaming && (m.sources || []).length > 0;
+  const text = (m.text || '').replace(ALT_CITE, '[$1]');
+  // Odd-numbered pieces sit between ``` fences. An unclosed fence while the
+  // answer is still streaming simply renders as code until it closes.
+  const body = text.split('```').map((part, i) => (i % 2
+    ? `<pre class="md-pre"><code>${esc(part.replace(/^[\w+.-]*\n/, ''))}</code></pre>`
+    : proseHTML(part, m, linkCites))).join('');
+  return body + (m.streaming ? '<span class="caret" aria-hidden="true">▍</span>' : '');
+}
+
+function sourcesHTML(m) {
+  const srcs = m.sources || [];
+  if (!srcs.length) return '';
+  const open = !!S.openSrc[m.id];
+  const best = ` · best ${Number(srcs[0].similarity).toFixed(3)}`;
+  let html = `<button type="button" class="btn btn-secondary src-toggle" data-toggle="${m.id}" aria-expanded="${open}">`
+    + `${plural(srcs.length, 'source')}${best}${ICON.chev}</button>`;
+  if (open) {
+    html += '<div class="srcs">' + srcs.map((s) => {
+      const key = `${m.id}-${s.n}`;
+      const pct = Math.round(Math.max(0, Math.min(1, s.similarity)) * 100);
+      return `<div class="src${S.hiSrc === key ? ' hi' : ''}" id="src-${key}">`
+        + `<div class="src-h"><span class="src-n">${s.n}</span>`
+        + `<span class="src-f">${esc(s.filename)}</span>`
+        + `<span class="src-c">chunk ${s.chunk_index}</span>`
+        + `<span class="simbar"><i style="width:${pct}%"></i></span>`
+        + `<span class="src-s">${Number(s.similarity).toFixed(4)}</span></div>`
+        + `<div class="src-x">${esc(s.excerpt)}</div></div>`;
+    }).join('') + '</div>';
+  }
+  return html;
+}
+
+function msgHTML(m) {
+  const isAnswer = m.role === 'assistant' || m.role === 'retrieval';
+  const who = { user: 'You', assistant: 'Assistant', retrieval: 'Retrieval', error: 'Error' }[m.role];
+  const dot = m.role === 'user' ? 'var(--color-neutral-500)'
+    : m.role === 'error' ? 'var(--color-accent-700)' : 'var(--color-accent)';
+  let body = '';
+  if (m.role === 'user') body = `<div class="bubble-user">${esc(m.text)}</div>`;
+  else if (m.role === 'error') body = `<div class="bubble-err">${esc(m.text)}</div>`;
+  else body = `<div class="answer" id="ans-${m.id}">${answerHTML(m)}</div>`;
+  return `<div class="msg"><div class="who"><span class="sq" style="background:${dot}"></span>${who}</div>`
+    + body
+    + (isAnswer ? receiptHTML(m.receipt) + sourcesHTML(m) : '')
+    + '</div>';
+}
+
+function renderThread() {
+  const thread = S[kind()];
+  const el = $('thread');
+  if (!thread.length) {
+    if (S.mode === 'checking') { el.innerHTML = ''; return; }
+    const isRag = kind() === 'rag';
+    const kicker = isRag ? `POST /v1/rag/query · ${plural(S.docs.length, 'document')} indexed` : 'POST /v1/chat';
+    const body = isRag
+      ? 'Questions are embedded once, checked against the semantic cache, then answered from the top-k chunks of your corpus with [n] citations.'
+      : 'Chat goes straight to the selected provider. Switch to Ask docs to answer from your indexed corpus instead.';
+    el.innerHTML = `<div class="empty"><span class="cap k">${esc(kicker)}</span>`
+      + '<span class="h">Send a message to start</span>'
+      + `<span class="b muted">${body}</span>`
+      + '<span class="keys muted"><kbd>Enter</kbd>send<span style="width:12px"></span><kbd>Shift</kbd>+<kbd>Enter</kbd>newline</span></div>';
+    return;
+  }
+  el.innerHTML = thread.map(msgHTML).join('');
+}
+
+function renderComposer() {
+  const isRag = kind() === 'rag', isChat = !isRag;
+  $('sys').hidden = !(isChat && S.showSys);
+  $('ragctl').hidden = !isRag;
+  $('history').hidden = !isChat;
+  const turns = S.chat.filter((m) => m.role === 'user' || m.role === 'assistant').length;
+  $('history').textContent = turns
+    ? `${plural(turns, 'message')} in context${$('sys').value.trim() ? ' + system prompt' : ''}`
+    : 'New conversation';
+  $('input').placeholder = isRag
+    ? (S.retrieveOnly ? 'Retrieve chunks for…' : 'Ask about your documents…')
+    : 'Ask something…';
+  $('sendLabel').textContent = isRag && S.retrieveOnly ? 'Retrieve' : 'Send';
+  $('input').disabled = S.busy;
+  $('stop').disabled = !S.busy;
+  $('send').disabled = S.busy || !$('input').value.trim();
+}
+
+const scrollBottom = () => requestAnimationFrame(() => { $('log').scrollTop = $('log').scrollHeight; });
+
+function patch(k, id, fn) {
+  S[k] = S[k].map((m) => (m.id === id ? { ...m, ...fn(m) } : m));
+}
+
+function setBusy(busy) {
+  S.busy = busy;
+  renderComposer();
+}
+
+function newChat() {
+  if (controller) controller.abort();
+  S[kind()] = [];
+  renderThread();
+  renderComposer();
+}
+
+// ---- send ------------------------------------------------------------------
+
+async function send() {
+  const text = $('input').value.trim();
+  if (!text || controller) return;
+  const k = kind();
+
+  // Built from the thread before this turn is added. Error turns and stopped
+  // fragments without text are left out so a retry doesn't resend them.
+  const history = S.chat
+    .filter((m) => (m.role === 'user' || m.role === 'assistant') && m.text)
+    .map((m) => ({ role: m.role, content: m.text }));
+
+  S[k].push({ id: ++seq, role: 'user', text });
+  $('input').value = '';
+  autosize();
+  renderThread();
+  scrollBottom();
+
+  if (k === 'rag' && S.retrieveOnly) { await retrieve(text); return; }
+
+  const id = ++seq;
+  S[k].push({ id, role: 'assistant', text: '', streaming: true, sources: [], receipt: null });
+  renderThread();
+
+  let url, payload;
+  if (k === 'rag') {
+    url = '/v1/rag/query';
+    payload = {
+      question: text,
+      top_k: Number($('topk').value) || 5,
+      min_similarity: Number($('minsim').value),
+    };
+  } else {
+    const messages = [];
+    const sys = $('sys').value.trim();
+    if (sys) messages.push({ role: 'system', content: sys });
+    messages.push(...history, { role: 'user', content: text });
+    url = '/v1/chat';
+    payload = { messages };
+  }
+  if ($('provider').value) payload.provider = $('provider').value;
+  if ($('model').value.trim()) payload.model = $('model').value.trim();
+
+  controller = new AbortController();
+  setBusy(true);
+  const t0 = performance.now();
+  let ttft = null, answer = '';
+
+  const onEvent = (event, msg) => {
+    if (event === 'sources') {
+      // Emitted before the first token on purpose, so citations can be
+      // rendered while the answer is still arriving.
+      patch(k, id, () => ({ sources: msg.sources }));
+      renderThread();
+    } else if (event === 'token') {
+      if (ttft === null) ttft = performance.now() - t0;
+      answer += msg.text;
+      patch(k, id, () => ({ text: answer }));
+      const el = $(`ans-${id}`);
+      if (el) el.innerHTML = answerHTML(S[k].find((m) => m.id === id));
+      scrollBottom();
+    } else if (event === 'done') {
+      const u = msg.usage || {};
+      const receipt = msg.cached
+        ? { cached: true, similarity: msg.cache_similarity, latency: msg.latency_ms, saved: msg.tokens_saved,
+            age: msg.cache_age_seconds, model: msg.model, cachedQuestion: msg.cached_question }
+        : { cached: false, provider: msg.provider, model: msg.model, input: u.input_tokens, output: u.output_tokens,
+            ttft, total: msg.latency_ms, finish: msg.finish_reason };
+      patch(k, id, () => ({ receipt, streaming: false }));
+      renderThread();
+      scrollBottom();
+    } else if (event === 'error') {
+      // Mid-stream failure: the 200 is already sent, so this in-band event is
+      // the only channel left. It is terminal.
+      throw new Error(msg.error || 'stream error');
+    }
+  };
+
+  try {
+    await streamSSE(url, payload, controller.signal, onEvent);
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      patch(k, id, (m) => ({ text: (m.text || '') + '\n\n[stopped]', streaming: false }));
+    } else {
+      patch(k, id, (m) => ({ role: 'error', text: m.text ? m.text + '\n\n— ' + err.message : err.message, streaming: false }));
+    }
+  } finally {
+    controller = null;
+    patch(k, id, () => ({ streaming: false }));
+    setBusy(false);
+    renderThread();
+    scrollBottom();
+    $('input').focus();
+  }
+}
+
+/** Retrieval with no generation — costs embedding quota only, not chat quota. */
+async function retrieve(question) {
+  const id = ++seq;
+  const topK = Number($('topk').value) || 5, min = Number($('minsim').value);
+  setBusy(true);
+  try {
+    const res = await fetch('/v1/rag/retrieve', {
+      method: 'POST',
+      headers: headers({ 'content-type': 'application/json' }),
+      body: JSON.stringify({ question, top_k: topK, min_similarity: min }),
+    });
+    if (!res.ok) throw new Error(limitMessage(res, await errorDetail(res)));
+    const data = await res.json();
+    const n = data.sources.length;
+    S.rag.push({
+      id, role: 'retrieval', sources: data.sources, receipt: null,
+      text: n ? `${plural(n, 'chunk')} cleared min_sim ${min}. No answer generated.` : `Nothing cleared min_sim ${min}.`,
+    });
+    S.openSrc[id] = true;
+  } catch (e) {
+    S.rag.push({ id, role: 'error', text: e.message });
+  } finally {
+    setBusy(false);
+    renderThread();
+    scrollBottom();
+    $('input').focus();
+  }
+}
+
+function citeClick(msgId, n) {
+  const key = `${msgId}-${n}`;
+  S.openSrc[msgId] = true;
+  S.hiSrc = key;
+  renderThread();
+  const el = $(`src-${key}`), log = $('log');
+  if (el) log.scrollTop += el.getBoundingClientRect().top - log.getBoundingClientRect().top - log.clientHeight / 3;
+  clearTimeout(hiTimer);
+  hiTimer = setTimeout(() => { S.hiSrc = null; renderThread(); }, 1600);
+}
+
+// ---- metrics ---------------------------------------------------------------
+
+async function loadMetrics(hours = S.mWindow) {
+  S.mStatus = 'loading…';
+  $('mstatus').textContent = S.mStatus;
+  try {
+    const [mRes, rRes] = await Promise.all([
+      fetch(`/v1/metrics?window_hours=${hours}`, { headers: headers() }),
+      fetch('/v1/metrics/recent?limit=15', { headers: headers() }),
+    ]);
+    if (!mRes.ok) {
+      S.mStatus = limitMessage(mRes, await errorDetail(mRes));
+    } else {
+      S.metrics = await mRes.json();
+      S.recent = rRes.ok ? (await rRes.json()).requests : [];
+      S.mStatus = '';
+    }
+  } catch (e) {
+    S.mStatus = e.message;
+  }
+  if (S.view === 'metrics') renderMetrics();
+}
+
+function renderMetrics() {
+  $('mwindow').innerHTML = WINDOWS.map(([id, label]) =>
+    `<button type="button" data-window="${id}" class="${S.mWindow === id ? 'on' : ''}" aria-pressed="${S.mWindow === id}">${label}</button>`).join('');
+  $('mstatus').textContent = S.mStatus;
+
+  const M = S.metrics, sm = M && M.summary;
+  const body = $('mbody');
+  if (!sm) { body.innerHTML = ''; return; }
+  if (!sm.requests) {
+    body.innerHTML = '<div class="mempty"><span class="h">No requests recorded in this window.</span>'
+      + '<span class="muted">Send a chat message or ask a docs question, then refresh.</span></div>';
+    return;
+  }
+
+  const hitPct = Math.min(100, sm.cache_hit_rate * 100).toFixed(1);
+  const win = WINDOW_LABEL[Number(S.mWindow)];
+  const unpriced = Number(sm.cost_usd.unpriced_requests);
+  const kpis = [
+    ['Requests', compact(sm.requests), plural(sm.errors, 'error')],
+    ['Cache hit rate', hitPct + '%', `${sm.cache_hits} of ${sm.requests}`],
+    ['Saved by cache', money(sm.cost_usd.saved_by_cache), 'avoided spend'],
+    ['p95 latency', ms(sm.latency_ms.p95), `p50 ${ms(sm.latency_ms.p50)}`],
+  ].map(([l, v, s]) => `<div class="kpi"><span class="label">${l}</span><span class="value">${esc(v)}</span><span class="sub">${esc(s)}</span></div>`).join('');
+
+  const byModel = M.by_model.map((m) =>
+    `<tr><td>${esc(m.provider)}</td><td class="b">${esc(m.model)}</td>`
+    + `<td class="n">${m.requests}</td><td class="n">${m.cache_hits}</td>`
+    + `<td class="n">${money(m.cost_usd)}</td><td class="n">${ms(m.p95_latency_ms)}</td></tr>`).join('');
+
+  const recent = S.recent.map((r) =>
+    `<tr><td class="t">${new Date(r.created_at).toLocaleTimeString()}</td>`
+    + `<td>${esc(r.endpoint)}</td><td>${esc(r.model)}</td>`
+    + `<td>${r.cached ? '<span class="pill">HIT</span>' : ''}</td>`
+    + `<td class="n">${r.input_tokens}</td><td class="n">${r.output_tokens}</td>`
+    + `<td class="n">${ms(r.latency_ms)}</td><td class="n">${money(r.cost_usd)}</td></tr>`).join('');
+
+  body.innerHTML =
+    '<div class="mgrid">'
+    + `<div class="hero"><span class="label">Spend · ${win}</span><div class="val">`
+    + `<span class="value">${money(sm.cost_usd.spent)}</span>`
+    + `<span class="sub">${compact(sm.requests)} request${sm.requests === 1 ? '' : 's'} · ${compact(sm.tokens.total)} tokens${unpriced ? ` · ${unpriced} unpriced` : ''}</span>`
+    + '</div></div>'
+    + kpis
+    + '<div class="meter-cell"><span class="label">Cache hit rate</span>'
+    + `<div class="meter" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${hitPct}" aria-label="Cache hit rate"><span style="width:${hitPct}%"></span></div>`
+    + `<span class="sub">${hitPct}% of requests answered from cache · p99 ${ms(sm.latency_ms.p99)}</span></div>`
+    + '</div>'
+    + '<div class="mtable"><span class="cap">By model</span><div class="tscroll"><table>'
+    + '<thead><tr><th>Provider</th><th>Model</th><th class="n">Requests</th><th class="n">Hits</th><th class="n">Cost</th><th class="n">p95</th></tr></thead>'
+    + `<tbody>${byModel}</tbody></table></div></div>`
+    + '<div class="mtable"><span class="cap">Recent requests</span><div class="tscroll"><table>'
+    + '<thead><tr><th>Time</th><th>Endpoint</th><th>Model</th><th></th><th class="n">In</th><th class="n">Out</th><th class="n">Latency</th><th class="n">Cost</th></tr></thead>'
+    + `<tbody>${recent}</tbody></table></div></div>`;
+}
+
+// ---- drawer ----------------------------------------------------------------
+
+function closeDrawer() { $('side').classList.remove('open'); $('scrim').classList.remove('on'); }
+
+// ---- wiring ----------------------------------------------------------------
+
+function autosize() {
+  const el = $('input');
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 200) + 'px';
+}
+
+$('nav').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-view]');
+  if (b) setView(b.dataset.view);
+});
+$('themeBtn').onclick = () => {
+  S.theme = S.theme === 'dark' ? 'light' : 'dark';
+  store.set('docxpo_theme', S.theme);
+  applyTheme();
+};
+$('toggleSys').onclick = () => {
+  S.showSys = !S.showSys;
+  renderTopbar();
+  renderComposer();
+  if (S.showSys) $('sys').focus();
+};
+$('newBtn').onclick = newChat;
+$('menu').onclick = () => {
+  const open = $('side').classList.toggle('open');
+  $('scrim').classList.toggle('on', open);
+};
+$('scrim').onclick = closeDrawer;
+
+$('thread').addEventListener('click', (e) => {
+  const cite = e.target.closest('.cite');
+  if (cite) { citeClick(Number(cite.dataset.msg), cite.dataset.n); return; }
+  const t = e.target.closest('[data-toggle]');
+  if (t) { const id = Number(t.dataset.toggle); S.openSrc[id] = !S.openSrc[id]; renderThread(); }
+});
 
 $('drop').onclick = () => $('file').click();
 $('drop').onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('file').click(); } };
@@ -690,474 +1166,57 @@ $('file').onchange = function () { if (this.files[0]) { uploadFile(this.files[0]
 ['dragleave', 'drop'].forEach((ev) =>
   $('drop').addEventListener(ev, (e) => { e.preventDefault(); $('drop').classList.remove('over'); }));
 $('drop').addEventListener('drop', (e) => uploadFile(e.dataTransfer.files[0]));
-
-$('pasteBtn').onclick = () => {
-  const content = $('paste').value.trim();
-  if (!content) return docMsg('paste some text first', true);
-  ingest(() => fetch('/v1/documents/text', {
-    method: 'POST',
-    headers: authHeaders({ 'content-type': 'application/json' }),
-    body: JSON.stringify({ filename: 'pasted.txt', content }),
-  })).then(() => { $('paste').value = ''; });
-};
-
+$('pasteBtn').onclick = indexPaste;
 $('refresh').onclick = loadDocs;
+$('doclist').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-del]');
+  if (b) deleteDoc(b.dataset.del);
+});
 
-// ---- metrics ---------------------------------------------------------------
+$('provider').onchange = () => { $('model').placeholder = DEFAULT_MODELS[$('provider').value] || '(provider default)'; };
+// Kept in localStorage: this is a console, and retyping the key on every
+// reload would make it unusable. localStorage is readable by any script on
+// this origin, which is acceptable here and would not be for a product page.
+$('apikey').value = store.get('docxpo_api_key') || '';
+$('apikey').addEventListener('change', function () { store.set('docxpo_api_key', this.value.trim()); });
 
-/** Auto-compact per the stat-tile contract: 1,284 / 12.9K / 4.2M. */
-function compact(n) {
-  if (n === null || n === undefined) return '—';
-  if (n >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M';
-  if (n >= 1e4) return (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'K';
-  return n.toLocaleString();
-}
-
-/** Money: keep enough precision that a sub-cent request isn't shown as $0. */
-function money(v) {
-  const n = Number(v);
-  if (!isFinite(n)) return '$0';
-  if (n === 0) return '$0';
-  if (n < 0.01) return '$' + n.toFixed(6).replace(/0+$/, '').replace(/\.$/, '');
-  if (n < 1000) return '$' + n.toFixed(4).replace(/0+$/, '').replace(/\.$/, '');
-  return '$' + compact(n);
-}
-
-const ms = (v) => (v === null || v === undefined ? '—' : Math.round(v).toLocaleString() + 'ms');
-
-function tile(label, value, sub = '') {
-  return `<div class="kpi"><div class="label">${label}</div>` +
-         `<div class="value">${value}</div>` +
-         (sub ? `<div class="sub">${sub}</div>` : '') + `</div>`;
-}
-
-async function loadMetrics() {
-  const hours = $('mwindow').value;
-  $('mstatus').textContent = 'loading…';
-  try {
-    const [mRes, rRes] = await Promise.all([
-      fetch(`/v1/metrics?window_hours=${hours}`, { headers: authHeaders() }),
-      fetch('/v1/metrics/recent?limit=15', { headers: authHeaders() }),
-    ]);
-    if (!mRes.ok) {
-      $('mstatus').textContent = limitMessage(mRes, await mRes.text());
-      return;
-    }
-    const data = await mRes.json();
-    const recent = rRes.ok ? (await rRes.json()).requests : [];
-    render(data, recent);
-    $('mstatus').textContent = '';
-  } catch (e) {
-    $('mstatus').textContent = e.message;
-  }
-}
-
-function render(data, recent) {
-  const s = data.summary;
-  const body = $('mbody');
-
-  if (!s.requests) {
-    body.innerHTML =
-      '<div class="card"><div class="mempty">No requests recorded in this window.<br>' +
-      'Send a chat message or ask a docs question, then refresh.</div></div>';
-    return;
-  }
-
-  const hitPct = (s.cache_hit_rate * 100).toFixed(1);
-  const label = { 1: 'last hour', 24: 'last 24 hours', 168: 'last 7 days', 0: 'all time' }[
-    Number($('mwindow').value)
-  ];
-
-  // Exactly ONE hero figure per view. Spend is the number this dashboard leads
-  // with -- an LLM gateway's headline question is "what is this costing me".
-  const hero =
-    `<div class="hero">` +
-    `<div class="label">spend · ${label}</div>` +
-    `<div class="value">${money(s.cost_usd.spent)}</div>` +
-    `<div class="sub">${compact(s.requests)} request${s.requests === 1 ? '' : 's'} · ` +
-    `${compact(s.tokens.total)} tokens` +
-    (Number(s.cost_usd.unpriced_requests)
-      ? ` · <span style="color:var(--warn)">${s.cost_usd.unpriced_requests} unpriced</span>`
-      : '') +
-    `</div></div>`;
-
-  const kpis =
-    `<div class="kpis">` +
-    tile('requests', compact(s.requests), `${s.errors} error${s.errors === 1 ? '' : 's'}`) +
-    tile('cache hit rate', hitPct + '%', `${s.cache_hits} of ${s.requests}`) +
-    tile('saved by cache', money(s.cost_usd.saved_by_cache), 'avoided spend') +
-    tile('p95 latency', ms(s.latency_ms.p95), `p50 ${ms(s.latency_ms.p50)}`) +
-    `</div>`;
-
-  // A single ratio against a limit -> meter, not a two-slice pie.
-  const meter =
-    `<div class="card"><h3>Cache hit rate</h3>` +
-    `<div class="meter"><span style="width:${Math.min(100, hitPct)}%"></span></div>` +
-    `<div class="cap">${hitPct}% of requests answered from cache · p99 ${ms(s.latency_ms.p99)}</div></div>`;
-
-  const byModel =
-    `<div class="card"><h3>By model</h3><div class="scroll-x"><table class="m">` +
-    `<tr><th>Provider</th><th>Model</th><th class="n">Requests</th>` +
-    `<th class="n">Hits</th><th class="n">Cost</th><th class="n">p95</th></tr>` +
-    data.by_model
-      .map(
-        (m) =>
-          `<tr><td class="mono">${esc(m.provider)}</td><td class="mono">${esc(m.model)}</td>` +
-          `<td class="n">${m.requests}</td><td class="n">${m.cache_hits}</td>` +
-          `<td class="n">${money(m.cost_usd)}</td><td class="n">${ms(m.p95_latency_ms)}</td></tr>`,
-      )
-      .join('') +
-    `</table></div></div>`;
-
-  const recentRows = recent
-    .map(
-      (r) =>
-        `<tr><td class="mono">${new Date(r.created_at).toLocaleTimeString()}</td>` +
-        `<td class="mono">${esc(r.endpoint)}</td><td class="mono">${esc(r.model)}</td>` +
-        `<td>${r.cached ? '<span class="pill">HIT</span>' : ''}</td>` +
-        `<td class="n">${r.input_tokens}</td><td class="n">${r.output_tokens}</td>` +
-        `<td class="n">${ms(r.latency_ms)}</td><td class="n">${money(r.cost_usd)}</td></tr>`,
-    )
-    .join('');
-
-  const recentCard =
-    `<div class="card"><h3>Recent requests</h3><div class="scroll-x"><table class="m">` +
-    `<tr><th>Time</th><th>Endpoint</th><th>Model</th><th></th>` +
-    `<th class="n">In</th><th class="n">Out</th><th class="n">Latency</th><th class="n">Cost</th></tr>` +
-    recentRows +
-    `</table></div></div>`;
-
-  body.innerHTML = hero + kpis + meter + byModel + recentCard;
-}
-
-$('mrefresh').onclick = loadMetrics;
-$('mwindow').onchange = loadMetrics;
-
-// ---- rendering ------------------------------------------------------------
-
-function addMsg(role, text = '', cls = '') {
-  if (log.querySelector('.empty')) log.innerHTML = '';
-  const el = document.createElement('div');
-  el.className = `msg ${cls || role}`;
-  el.innerHTML = `<div class="who"></div><div class="bubble"></div>`;
-  el.querySelector('.who').textContent = role;
-  el.querySelector('.bubble').textContent = text;
-  log.appendChild(el);
-  scroll();
-  return el;
-}
-
-const scroll = () => { $('log').scrollTop = $('log').scrollHeight; };
-
-function setBusy(busy) {
-  $('send').disabled = busy;
-  $('stop').disabled = !busy;
-  $('input').disabled = busy;
-}
-
-function renderSources(el, sources, { collapsed = true } = {}) {
-  const d = document.createElement('details');
-  d.className = 'src';
-  d.open = !collapsed;
-  const top = sources.length ? ` · best ${sources[0].similarity.toFixed(3)}` : '';
-  d.innerHTML = `<summary>${sources.length} source${sources.length === 1 ? '' : 's'}${top}</summary>`;
-  for (const s of sources) {
-    const item = document.createElement('div');
-    item.className = 'srcitem';
-    item.id = `src-${el.dataset.mid}-${s.n}`;
-    // The similarity bar reads as a column down the list, so a chunk that only
-    // just cleared the floor is obvious without comparing four decimal places.
-    item.innerHTML =
-      `<div class="srchead">` +
-      `<span class="n">${s.n}</span>` +
-      `<span class="fn"></span>` +
-      `<span class="sp"></span>` +
-      `<span>chunk ${s.chunk_index}</span>` +
-      `<span class="simbar"><i style="width:${Math.round(Math.max(0, Math.min(1, s.similarity)) * 100)}%"></i></span>` +
-      `<span>${s.similarity.toFixed(4)}</span>` +
-      `</div>`;
-    item.querySelector('.fn').textContent = s.filename;
-    item.appendChild(document.createTextNode(s.excerpt));
-    d.appendChild(item);
-  }
-  el.appendChild(d);
-  scroll();
-  return d;
-}
-
-/** Turn [1] / [2] in the finished answer into clickable citation chips. */
-function linkCitations(bubble, el) {
-  const html = esc(bubble.textContent).replace(/\[(\d+)\]/g,
-    (m, n) => `<span class="cite" data-n="${n}" title="Jump to source ${n}">${n}</span>`);
-  bubble.innerHTML = html;
-  bubble.querySelectorAll('.cite').forEach((c) => {
-    c.onclick = () => {
-      const target = document.getElementById(`src-${el.dataset.mid}-${c.dataset.n}`);
-      if (!target) return;
-      target.closest('details').open = true;
-      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      target.classList.add('hi');
-      setTimeout(() => target.classList.remove('hi'), 1600);
-    };
-  });
-}
-
-/** One label/value pair in the receipt strip. */
-const stat = (k, v) => `<span><span class="k">${k}</span> <b>${v}</b></span>`;
-
-// ---- send -----------------------------------------------------------------
-
-let msgSeq = 0;
-
-async function send() {
-  const text = $('input').value.trim();
-  if (!text || controller) return;
-
-  addMsg('you', text, 'user');
-  $('input').value = '';
-  $('input').style.height = 'auto';
-
-  if (mode === 'rag' && $('retrieveOnly').checked) return retrieveOnly(text);
-
-  const el = addMsg('assistant');
-  el.dataset.mid = String(++msgSeq);
-  const bubble = el.querySelector('.bubble');
-  bubble.classList.add('cursor');
-
-  let url, payload;
-  if (mode === 'rag') {
-    url = '/v1/rag/query';
-    payload = {
-      question: text,
-      top_k: Number($('topk').value) || 5,
-      min_similarity: Number($('minsim').value),
-    };
-  } else {
-    history.push({ role: 'user', content: text });
-    const messages = [];
-    const sys = $('sys').value.trim();
-    if (sys) messages.push({ role: 'system', content: sys });
-    messages.push(...history);
-    url = '/v1/chat';
-    payload = { messages };
-  }
-  if ($('provider').value) payload.provider = $('provider').value;
-  if ($('model').value.trim()) payload.model = $('model').value.trim();
-
-  controller = new AbortController();
-  setBusy(true);
-
-  const t0 = performance.now();
-  let ttft = null, answer = '', sourceCount = 0;
-
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: authHeaders({ 'content-type': 'application/json' }),
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    });
-
-    // Failures *before* streaming starts arrive as a real HTTP status, because
-    // the server pulls the first event before committing to a 200.
-    if (!res.ok) {
-      fail(el, bubble, limitMessage(res, await errorDetail(res)));
-      return;
-    }
-
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buf = '';
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      // {stream:true}: a multi-byte character can straddle two network chunks.
-      buf += decoder.decode(value, { stream: true });
-
-      let i;
-      while ((i = buf.indexOf('\n\n')) !== -1) {
-        const frame = buf.slice(0, i);
-        buf = buf.slice(i + 2);
-
-        let event = 'message', data = '';
-        for (const line of frame.split('\n')) {
-          if (line.startsWith('event: ')) event = line.slice(7);
-          else if (line.startsWith('data: ')) data += line.slice(6);
-        }
-        if (!data) continue;
-        const msg = JSON.parse(data);
-
-        if (event === 'sources') {
-          // Emitted before the first token on purpose, so citations can be
-          // rendered while the answer is still arriving.
-          sourceCount = msg.sources.length;
-          if (sourceCount) renderSources(el, msg.sources);
-        } else if (event === 'token') {
-          if (ttft === null) ttft = performance.now() - t0;
-          answer += msg.text;
-          bubble.textContent = answer;
-          scroll();
-        } else if (event === 'done') {
-          bubble.classList.remove('cursor');
-          if (mode === 'rag' && sourceCount) linkCitations(bubble, el);
-          const u = msg.usage;
-          const s = document.createElement('div');
-          s.className = 'stats';
-
-          if (msg.cached) {
-            // A cache hit spends no tokens and returns in ~1ms, so the usual
-            // token/TTFT numbers would all read zero and say nothing useful.
-            // It gets its own strip rather than a recoloured one.
-            s.className = 'stats hit';
-            s.innerHTML =
-              `<span class="hit-badge">CACHE HIT</span>` +
-              stat('similarity', msg.cache_similarity) +
-              stat('latency', msg.latency_ms + 'ms') +
-              stat('saved', msg.tokens_saved + ' tok') +
-              stat('age', Math.round(msg.cache_age_seconds) + 's') +
-              stat('model', msg.model);
-            if (msg.cached_question && msg.cache_similarity < 1) {
-              const q = document.createElement('div');
-              q.className = 'note';
-              // Show which earlier question this answer was written for, so a
-              // wrong-looking answer is immediately explainable.
-              q.textContent = `matched earlier question: "${msg.cached_question}"`;
-              s.appendChild(q);
-            }
-          } else {
-            s.innerHTML =
-              stat('provider', esc(msg.provider)) +
-              stat('model', esc(msg.model)) +
-              stat('in', u.input_tokens) +
-              stat('out', u.output_tokens) +
-              stat('ttft', ttft === null ? '—' : Math.round(ttft) + 'ms') +
-              stat('total', Math.round(msg.latency_ms) + 'ms') +
-              (msg.finish_reason === 'max_tokens'
-                ? `<span class="errv">truncated (max_tokens)</span>` : '') +
-              (msg.finish_reason === 'no_context'
-                ? `<span class="warnv">nothing cleared min_sim</span>` : '');
-          }
-          el.insertBefore(s, el.querySelector('details.src'));
-          if (mode === 'chat') history.push({ role: 'assistant', content: answer });
-          scroll();
-        } else if (event === 'error') {
-          // Mid-stream failure: the 200 is already sent, so this is the only
-          // channel left. It is terminal.
-          fail(el, bubble, msg.error, answer);
-          return;
-        }
-      }
-    }
-  } catch (err) {
-    if (err.name === 'AbortError') {
-      bubble.classList.remove('cursor');
-      bubble.textContent = answer + '\n\n[stopped]';
-      if (mode === 'chat' && answer) history.push({ role: 'assistant', content: answer });
-    } else {
-      fail(el, bubble, err.message, answer);
-    }
-  } finally {
-    controller = null;
-    setBusy(false);
-    bubble.classList.remove('cursor');
-    $('input').focus();
-  }
-}
-
-/** Retrieval with no generation — costs embedding quota only, not chat quota. */
-async function retrieveOnly(question) {
-  const el = addMsg('retrieval', '', 'assistant');
-  el.dataset.mid = String(++msgSeq);
-  const bubble = el.querySelector('.bubble');
-  setBusy(true);
-  const t0 = performance.now();
-
-  try {
-    const res = await fetch('/v1/rag/retrieve', {
-      method: 'POST',
-      headers: authHeaders({ 'content-type': 'application/json' }),
-      body: JSON.stringify({
-        question,
-        top_k: Number($('topk').value) || 5,
-        min_similarity: Number($('minsim').value),
-      }),
-    });
-    if (!res.ok) {
-      fail(el, bubble, limitMessage(res, await errorDetail(res)));
-      return;
-    }
-    const data = await res.json();
-    bubble.textContent = data.sources.length
-      ? `${data.sources.length} chunk(s) retrieved. No answer generated.`
-      : 'Nothing cleared the similarity floor — no chunks retrieved.';
-    if (data.sources.length) renderSources(el, data.sources, { collapsed: false });
-
-    const s = document.createElement('div');
-    s.className = 'stats';
-    s.innerHTML = stat('retrieval only', Math.round(performance.now() - t0) + 'ms')
-                + `<span class="k">no generation quota used</span>`;
-    el.insertBefore(s, el.querySelector('details.src'));
-    scroll();
-  } catch (e) {
-    fail(el, bubble, e.message);
-  } finally {
-    setBusy(false);
-    $('input').focus();
-  }
-}
-
-function fail(el, bubble, message, partial = '') {
-  el.className = 'msg error';
-  el.querySelector('.who').textContent = 'error';
-  bubble.classList.remove('cursor');
-  bubble.textContent = (partial ? partial + '\n\n— ' : '') + message;
-  // Drop the user turn that failed so a retry doesn't duplicate it.
-  if (mode === 'chat' && !partial) history.pop();
-  scroll();
-}
-
-// ---- wiring ---------------------------------------------------------------
-
-function closeDrawer() { $('side').classList.remove('open'); $('scrim').classList.remove('on'); }
-$('menu').onclick = () => {
-  const open = $('side').classList.toggle('open');
-  $('scrim').classList.toggle('on', open);
+$('sys').addEventListener('input', renderComposer);
+$('retrieveOnly').onchange = function () {
+  S.retrieveOnly = this.checked;
+  renderTopbar();
+  renderComposer();
 };
-$('scrim').onclick = closeDrawer;
-
-$('send').onclick = send;
-$('stop').onclick = () => controller?.abort();
-$('mChat').onclick = () => setMode('chat');
-$('mRag').onclick = () => setMode('rag');
-$('mMetrics').onclick = () => setMode('metrics');
-$('reset').onclick = () => {
-  history = [];
-  log.innerHTML =
-    '<div class="empty"><h2>Send a message to start</h2>' +
-    '<p>Chat goes straight to the selected provider. Switch to Ask docs to answer from your indexed corpus instead.</p>' +
-    '<div class="keys"><kbd>Enter</kbd> send &nbsp;·&nbsp; <kbd>Shift</kbd>+<kbd>Enter</kbd> newline</div></div>';
-};
-$('toggleSys').onclick = () => {
-  const s = $('sys');
-  s.style.display = s.style.display === 'block' ? 'none' : 'block';
-  if (s.style.display === 'block') s.focus();
-};
-
 $('input').addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
 });
-$('input').addEventListener('input', function () {
-  this.style.height = 'auto';
-  this.style.height = Math.min(this.scrollHeight, 190) + 'px';
-});
-$('apikey').value = localStorage.getItem('docxpo_api_key') || '';
-$('apikey').addEventListener('change', function () {
-  localStorage.setItem('docxpo_api_key', this.value.trim());
-});
+$('input').addEventListener('input', () => { autosize(); $('send').disabled = S.busy || !$('input').value.trim(); });
+$('send').onclick = send;
+$('stop').onclick = () => controller?.abort();
 
-loadDocs();
-$('input').focus();
+$('mwindow').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-window]');
+  if (!b) return;
+  S.mWindow = b.dataset.window;
+  renderMetrics();
+  loadMetrics(S.mWindow);
+});
+$('mrefresh').onclick = () => loadMetrics();
+
+// ---- boot ------------------------------------------------------------------
+
+async function boot() {
+  renderAll();
+  S.mode = (await probe()) ? 'live' : 'offline';
+  renderTopbar();
+  renderDocs();
+  renderThread();
+  if (S.mode === 'live') loadDocs();
+  else docMsg('API unreachable — is the docXpo server running?', true);
+  if (S.view === 'metrics') loadMetrics();
+  else $('input').focus();
+}
+window.addEventListener('hashchange', () => { if (viewFromHash() !== S.view) setView(viewFromHash()); });
+boot();
 </script>
 </body>
 </html>

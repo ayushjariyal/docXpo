@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 from typing import Literal
+from urllib.parse import quote
 
 from pydantic import Field, SecretStr, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -53,6 +54,9 @@ class Settings(BaseSettings):
     postgres_user: str = "docxpo"
     postgres_password: str = "docxpo"
     postgres_db: str = "docxpo"
+    # Hosted Postgres (Neon, Supabase, RDS) refuses unencrypted connections.
+    # Off locally, where the compose database has no certificate to offer.
+    postgres_ssl: bool = False
 
     # Connection pool sizing. Each async worker holds up to
     # (pool_size + max_overflow) connections; Postgres' default max_connections
@@ -66,6 +70,8 @@ class Settings(BaseSettings):
     redis_port: int = 6379
     redis_db: int = 0
     redis_password: str | None = None
+    # TLS (rediss://). Required by hosted Redis such as Upstash.
+    redis_ssl: bool = False
 
     # ---- LLM providers -----------------------------------------------------
     # Gemini is the default: its free tier is the most generous, so the project
@@ -219,9 +225,10 @@ class Settings(BaseSettings):
 
     # ---- API ---------------------------------------------------------------
     api_v1_prefix: str = "/v1"
-    # Browser test console at "/". A dev tool, so it follows the same rule as
-    # the OpenAPI docs: off in prod unless explicitly enabled.
-    serve_ui: bool = True
+    # Browser console at "/". Unset means "on everywhere except prod", like the
+    # OpenAPI docs; SERVE_UI=true turns it on in prod explicitly, and
+    # SERVE_UI=false turns it off anywhere.
+    serve_ui: bool | None = None
     # Comma-separated in the env var; pydantic-settings parses JSON lists too.
     cors_origins: list[str] = Field(default_factory=lambda: ["*"])
 
@@ -236,19 +243,28 @@ class Settings(BaseSettings):
         "fully async" service serve one request at a time.
         """
         return (
-            f"postgresql+asyncpg://{self.postgres_user}:{self.postgres_password}"
+            f"postgresql+asyncpg://{self.postgres_user}:{quote(self.postgres_password, safe='')}"
             f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+            # asyncpg's spelling -- it does not understand libpq's sslmode=.
+            + ("?ssl=require" if self.postgres_ssl else "")
         )
 
     @computed_field  # type: ignore[prop-decorator]
     @property
     def redis_url(self) -> str:
-        auth = f":{self.redis_password}@" if self.redis_password else ""
-        return f"redis://{auth}{self.redis_host}:{self.redis_port}/{self.redis_db}"
+        auth = f":{quote(self.redis_password, safe='')}@" if self.redis_password else ""
+        scheme = "rediss" if self.redis_ssl else "redis"
+        return f"{scheme}://{auth}{self.redis_host}:{self.redis_port}/{self.redis_db}"
 
     @property
     def is_local(self) -> bool:
         return self.environment == "local"
+
+    @property
+    def ui_enabled(self) -> bool:
+        if self.serve_ui is not None:
+            return self.serve_ui
+        return self.environment != "prod"
 
 
 @lru_cache
